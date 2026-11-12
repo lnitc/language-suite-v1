@@ -76,3 +76,50 @@ def test_health_never_exposes_the_key(monkeypatch):
     response = TestClient(app).get("/api/health")
     assert response.json()["llm_key_set"] is True
     assert FAKE_KEY not in response.text
+
+
+# ---------- speech ----------
+
+def test_speech_sends_openai_style_request_and_returns_audio():
+    from app.providers.openai_compatible import OpenAICompatibleSpeech
+
+    seen = {}
+
+    def handler(request):
+        seen["url"] = str(request.url)
+        seen["auth"] = request.headers.get("authorization")
+        seen["body"] = json.loads(request.content)
+        return httpx.Response(200, content=b"RIFFaudio")
+
+    speech = OpenAICompatibleSpeech(
+        base_url="http://speech.test/v1",
+        model="some-voice-model",
+        voice="Freya",
+        api_key=FAKE_KEY,
+        transport=httpx.MockTransport(handler),
+    )
+    assert asyncio.run(speech.synthesize("Hello.")) == b"RIFFaudio"
+    assert seen["url"] == "http://speech.test/v1/audio/speech"
+    assert seen["auth"] == f"Bearer {FAKE_KEY}"
+    assert seen["body"] == {
+        "model": "some-voice-model",
+        "input": "Hello.",
+        "response_format": "wav",
+        "voice": "Freya",
+    }
+
+
+def test_speech_factory(monkeypatch):
+    from app.providers.factory import get_speech_provider
+
+    monkeypatch.setenv("TTS_PROVIDER", "browser")
+    assert get_speech_provider() is None
+
+    monkeypatch.setenv("TTS_PROVIDER", "openai_compatible")
+    monkeypatch.setenv("TTS_BASE_URL", "")
+    with pytest.raises(ProviderError, match="TTS_BASE_URL"):
+        get_speech_provider()
+
+    monkeypatch.setenv("TTS_PROVIDER", "nonsense")
+    with pytest.raises(ProviderError, match="browser"):
+        get_speech_provider()

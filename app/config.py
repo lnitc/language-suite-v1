@@ -20,6 +20,12 @@ class Settings:
     llm_model: str
     llm_api_key: str
     llm_timeout: float
+    tts_provider: str
+    tts_base_url: str
+    tts_model: str
+    tts_voice: str
+    tts_api_key: str
+    tts_timeout: float
 
 
 def get_settings() -> Settings:
@@ -29,4 +35,10 @@ def get_settings() -> Settings:
         llm_model=os.getenv("LLM_MODEL", "gemma4:e4b"),
         llm_api_key=os.getenv("LLM_API_KEY", ""),
         llm_timeout=float(os.getenv("LLM_TIMEOUT", "120")),
+        tts_provider=os.getenv("TTS_PROVIDER", "browser"),
+        tts_base_url=os.getenv("TTS_BASE_URL", "").rstrip("/"),
+        tts_model=os.getenv("TTS_MODEL", ""),
+        tts_voice=os.getenv("TTS_VOICE", ""),
+        tts_api_key=os.getenv("TTS_API_KEY", ""),
+        tts_timeout=float(os.getenv("TTS_TIMEOUT", "60")),
     )

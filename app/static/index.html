@@ -4,6 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Language Suite</title>
+  <link rel="icon" href="data:,">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -16,79 +17,160 @@
     <button class="tab" disabled title="Coming soon">Conversation</button>
     <button class="tab" disabled title="Coming soon">Job interview</button>
     <button class="tab" disabled title="Coming soon">Interpreter</button>
-    <button class="tab active">Vocabulary</button>
-    <button class="tab" disabled title="Coming soon">Dictation</button>
+    <button class="tab active" data-feature="vocabulary">Vocabulary</button>
+    <button class="tab" data-feature="dictation">Dictation</button>
   </nav>
 
   <main>
     <p id="error" class="error" role="alert" hidden></p>
 
-    <!-- 1. Setup -->
-    <section id="setup">
-      <h2>Vocabulary practice</h2>
-      <form id="setup-form">
-        <div class="row">
-          <label>Show words in
-            <input id="source-language" required maxlength="60" placeholder="e.g. English">
+    <!-- ================= Vocabulary ================= -->
+    <div class="feature" id="feature-vocabulary">
+      <section id="vocab-setup">
+        <h2>Vocabulary practice</h2>
+        <form id="setup-form">
+          <div class="row">
+            <label>Show words in
+              <input id="source-language" required maxlength="60" placeholder="e.g. English">
+            </label>
+            <label>I answer in
+              <input id="target-language" required maxlength="60" placeholder="e.g. Japanese">
+            </label>
+          </div>
+          <div class="row">
+            <label>Type of training
+              <select id="mode">
+                <option value="text">Text</option>
+                <option value="voice" disabled>Voice (coming soon)</option>
+              </select>
+            </label>
+            <label>Number of words
+              <input id="count" type="number" min="1" max="50" value="10" required>
+            </label>
+          </div>
+          <label>System prompt <span class="muted">(optional: who the teacher is)</span>
+            <textarea id="system-prompt" rows="2" maxlength="2000"
+              placeholder="You are a careful, encouraging language teacher."></textarea>
           </label>
-          <label>I answer in
-            <input id="target-language" required maxlength="60" placeholder="e.g. Japanese">
+          <label>Session prompt <span class="muted">(optional: topic, level, word types)</span>
+            <textarea id="session-prompt" rows="2" maxlength="2000"
+              placeholder="e.g. Intermediate business vocabulary about meetings"></textarea>
           </label>
-        </div>
-        <div class="row">
-          <label>Type of training
-            <select id="mode">
-              <option value="text">Text</option>
-              <option value="voice" disabled>Voice (coming soon)</option>
+          <label>Word list file <span class="muted">(optional: .txt or .csv with words to practice)</span>
+            <input id="material" type="file" accept=".txt,.csv,.tsv,.md,text/plain">
+          </label>
+          <button id="start-button" type="submit" class="primary">Start session</button>
+        </form>
+      </section>
+
+      <section id="vocab-practice" hidden>
+        <p id="progress" class="muted"></p>
+        <p id="direction" class="muted"></p>
+        <p id="word" class="word"></p>
+        <form id="answer-form">
+          <input id="answer" autocomplete="off" maxlength="300" placeholder="Type the translation">
+          <div class="row">
+            <button type="submit" class="primary">Submit</button>
+            <button type="button" id="skip-button">Skip (I don't know)</button>
+          </div>
+        </form>
+      </section>
+
+      <section id="vocab-results" hidden>
+        <h2>Results</h2>
+        <p id="score" class="score"></p>
+        <table>
+          <thead>
+            <tr><th>Word</th><th>Your translation</th><th>Correct translations</th><th>Result</th></tr>
+          </thead>
+          <tbody id="result-rows"></tbody>
+        </table>
+        <button id="restart-button" class="primary">New session</button>
+      </section>
+    </div>
+
+    <!-- ================= Dictation ================= -->
+    <div class="feature" id="feature-dictation" hidden>
+      <section id="dict-setup">
+        <h2>Dictation</h2>
+        <form id="dict-setup-form">
+          <label>Language
+            <input id="dict-language" required maxlength="60" placeholder="e.g. English">
+          </label>
+          <div class="row">
+            <label>Difficulty
+              <select id="dict-difficulty">
+                <option value="beginner">Beginner (A1)</option>
+                <option value="elementary">Elementary (A2)</option>
+                <option value="intermediate" selected>Intermediate (B1)</option>
+                <option value="upper_intermediate">Upper-intermediate (B2)</option>
+                <option value="advanced">Advanced (C1)</option>
+              </select>
+            </label>
+            <label>Approximate length
+              <select id="dict-length">
+                <option value="short">Short (about 3 sentences)</option>
+                <option value="medium" selected>Medium (about 6 sentences)</option>
+                <option value="long">Long (about 10 sentences)</option>
+              </select>
+            </label>
+          </div>
+          <label>System prompt <span class="muted">(optional: who the teacher is)</span>
+            <textarea id="dict-system-prompt" rows="2" maxlength="2000"
+              placeholder="You are a careful, encouraging language teacher."></textarea>
+          </label>
+          <label>Session prompt <span class="muted">(optional: topic, style)</span>
+            <textarea id="dict-session-prompt" rows="2" maxlength="2000"
+              placeholder="e.g. A short story about a trip to the mountains"></textarea>
+          </label>
+          <button id="dict-start-button" type="submit" class="primary">Start session</button>
+        </form>
+      </section>
+
+      <section id="dict-practice" hidden>
+        <p id="dict-progress" class="muted"></p>
+        <div class="player">
+          <button type="button" id="dict-play" class="primary">▶ Play</button>
+          <label class="inline">Speed
+            <select id="dict-speed">
+              <option value="0.7">Slow</option>
+              <option value="1" selected>Normal</option>
+              <option value="1.2">Fast</option>
             </select>
           </label>
-          <label>Number of words
-            <input id="count" type="number" min="1" max="50" value="10" required>
+          <label class="inline" id="dict-voice-label" hidden>Voice
+            <select id="dict-voice"></select>
           </label>
         </div>
-        <label>System prompt <span class="muted">(optional: who the teacher is)</span>
-          <textarea id="system-prompt" rows="2" maxlength="2000"
-            placeholder="You are a careful, encouraging language teacher."></textarea>
-        </label>
-        <label>Session prompt <span class="muted">(optional: topic, level, word types)</span>
-          <textarea id="session-prompt" rows="2" maxlength="2000"
-            placeholder="e.g. Intermediate business vocabulary about meetings"></textarea>
-        </label>
-        <label>Word list file <span class="muted">(optional: .txt or .csv with words to practice)</span>
-          <input id="material" type="file" accept=".txt,.csv,.tsv,.md,text/plain">
-        </label>
-        <button id="start-button" type="submit" class="primary">Start session</button>
-      </form>
-    </section>
+        <form id="dict-answer-form">
+          <label>Type what you hear
+            <textarea id="dict-answer" rows="3" maxlength="2000" autocomplete="off"
+              autocapitalize="off" spellcheck="false"></textarea>
+          </label>
+          <p class="muted">Punctuation and capital letters are not marked.</p>
+          <div class="row">
+            <button type="button" id="dict-back">← Previous</button>
+            <button type="submit" id="dict-next" class="primary">Next sentence →</button>
+          </div>
+        </form>
+      </section>
 
-    <!-- 2. Practice -->
-    <section id="practice" hidden>
-      <p id="progress" class="muted"></p>
-      <p id="direction" class="muted"></p>
-      <p id="word" class="word"></p>
-      <form id="answer-form">
-        <input id="answer" autocomplete="off" maxlength="300" placeholder="Type the translation">
-        <div class="row">
-          <button type="submit" class="primary">Submit</button>
-          <button type="button" id="skip-button">Skip (I don't know)</button>
-        </div>
-      </form>
-    </section>
-
-    <!-- 3. Results -->
-    <section id="results" hidden>
-      <h2>Results</h2>
-      <p id="score" class="score"></p>
-      <table>
-        <thead>
-          <tr><th>Word</th><th>Your translation</th><th>Correct translations</th><th>Result</th></tr>
-        </thead>
-        <tbody id="result-rows"></tbody>
-      </table>
-      <button id="restart-button" class="primary">New session</button>
-    </section>
+      <section id="dict-results" hidden>
+        <h2>Results</h2>
+        <p id="dict-score" class="score"></p>
+        <h3>Teacher's feedback</h3>
+        <p id="dict-feedback" class="feedback"></p>
+        <h3>Sentence by sentence</h3>
+        <p class="muted"><span class="miss">Highlighted</span> in the original: words you missed
+          or got wrong. <span class="extra">Struck through</span> in your text: words that do not match.</p>
+        <div id="dict-sentences"></div>
+        <button id="dict-restart" class="primary">New session</button>
+      </section>
+    </div>
   </main>
 
+  <script src="common.js"></script>
   <script src="vocabulary.js"></script>
+  <script src="dictation.js"></script>
 </body>
 </html>

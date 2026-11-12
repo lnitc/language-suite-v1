@@ -7,9 +7,6 @@ opinion on answers the code marked wrong (to catch valid synonyms).
 
 from __future__ import annotations
 
-import json
-import re
-import unicodedata
 import uuid
 from collections import OrderedDict
 from dataclasses import dataclass, field
@@ -19,6 +16,7 @@ from pydantic import BaseModel, Field
 
 from ..providers.base import ChatProvider, ProviderError
 from ..providers.factory import get_chat_provider
+from ..textutils import normalize, parse_json
 
 router = APIRouter(prefix="/api/vocabulary", tags=["vocabulary"])
 
@@ -65,27 +63,6 @@ class AnswerRequest(BaseModel):
 
 
 # ---------- helpers ----------
-
-def normalize(text: str) -> str:
-    """Make comparison forgiving: case, punctuation, width and spacing."""
-    text = unicodedata.normalize("NFKC", text).casefold()
-    text = re.sub(r"[^\w\s]", " ", text)
-    return " ".join(text.split())
-
-
-def parse_json(raw: str) -> dict:
-    """Parse model output, tolerating code fences or stray text around it."""
-    try:
-        data = json.loads(raw)
-    except ValueError:
-        start, end = raw.find("{"), raw.rfind("}")
-        if start == -1 or end <= start:
-            raise ValueError("no JSON object found") from None
-        data = json.loads(raw[start : end + 1])
-    if not isinstance(data, dict):
-        raise ValueError("JSON is not an object")
-    return data
-
 
 def _get_session(session_id: str) -> Session:
     session = _sessions.get(session_id)

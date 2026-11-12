@@ -6,7 +6,8 @@ computer with free local models, or with a cloud AI service if you prefer.
 | Feature | Status |
 |---|---|
 | Vocabulary practice (text) | Ready |
-| Dictation | Planned |
+| Dictation (typed) | Ready |
+| Dictation (handwritten, photo upload) | Planned |
 | Conversation partner (voice) | Planned |
 | Job interview rehearsal (voice) | Planned |
 | Interpreter simulation (voice) | Planned |
@@ -20,7 +21,7 @@ can be local or cloud without changing the features.
 |---|---|---|---|
 | Brain | Chat, questions, feedback | Ollama | Any OpenAI-style API |
 | Ear | Speech to text | Planned (separate install) | Planned |
-| Mouth | Text to speech | Planned (separate install) | Planned |
+| Mouth | Text to speech | Your browser's built-in voices (default) | Any OpenAI-style speech API |
 
 The app itself contains no models. Models and speech engines are installed
 separately, under their own licences.
@@ -129,10 +130,47 @@ python -m uvicorn app.main:app --port 8000
 Open <http://localhost:8000> in your browser. Press `Ctrl+C` in PowerShell to
 stop the app. It only listens on your own computer, not on the network.
 
-### Speech engines (for the voice features)
+## Voices (text to speech)
 
-Not needed yet. Install steps for the speech-to-text and text-to-speech
-engines will be added here together with the first voice feature.
+Dictation reads each sentence aloud. There are two ways to get a voice, set
+with `TTS_PROVIDER` in `.env`.
+
+| | `browser` (default) | `openai_compatible` |
+|---|---|---|
+| What speaks | Voices built into your browser and Windows | A speech server, local or cloud |
+| Install | Nothing, or add a Windows language pack | A speech server or a cloud account |
+| Quality | Depends on the voice; basic to good | Depends on the model; often more natural |
+| Privacy | Local for Windows voices (see note) | Local server: stays on your PC. Cloud: text is sent to the provider |
+
+### Browser voices
+
+Use Chrome or Edge. The app lists the voices that match the dictation
+language and lets you pick one.
+
+If the app says there is no voice for your language, add it in Windows:
+**Settings > Time & language > Language & region > Add a language**, choose
+the language, and keep **Text-to-speech** ticked. Then restart the browser.
+
+Privacy note: voices whose names contain "Online", "Natural" or "Google" are
+produced on that company's servers, so the sentence is sent there. Voices
+without those words run on your PC.
+
+### Speech server
+
+Any server with an OpenAI-style `/audio/speech` endpoint works: a cloud
+speech API, or a local speech server that you install separately under its
+own licence. Set these in `.env`:
+
+```ini
+TTS_PROVIDER=openai_compatible
+TTS_BASE_URL=<the server's API address, usually ending in /v1>
+TTS_MODEL=<speech model name>
+TTS_VOICE=<voice name, if the server needs one>
+TTS_API_KEY=<your own key, or empty for a local server>
+```
+
+Speech to text (for the conversation features) is not needed yet. Its
+install steps will be added with the first feature that uses the microphone.
 
 ## Troubleshooting
 
@@ -142,7 +180,9 @@ engines will be added here together with the first voice feature.
 | "Model ... was not found" | Run `ollama pull <model>`, or fix `LLM_MODEL` in `.env` |
 | "The model took too long to answer" | The first request loads the model and is slow. Retry, or raise `LLM_TIMEOUT` |
 | "rejected the API key" | Check `LLM_API_KEY` in `.env` |
-| "did not return a usable word list" | Retry. If it repeats, try a larger model |
+| "did not return a usable word list" or "dictation text" | Retry. If it repeats, try a larger model |
+| "This browser has no voice for ..." | Add the language in Windows (see Voices), or use a speech server |
+| Dictation is silent | Check the PC volume, pick another voice in the Voice list, or try Edge |
 
 ## For developers
 
@@ -154,10 +194,12 @@ app/
   config.py          settings from environment variables / .env
   providers/
     base.py          the three interfaces: ChatProvider, SpeechToText, TextToSpeech
-    openai_compatible.py   brain for Ollama and OpenAI-style cloud APIs
+    openai_compatible.py   brain and mouth for Ollama and OpenAI-style APIs
     factory.py       picks the provider named in the settings
   features/
     vocabulary.py    Feature 4
+    dictation.py     Feature 5
+  textutils.py       shared text helpers (answer matching, dictation marking)
   static/            browser UI (plain HTML, CSS, JavaScript)
 tests/               run without any model, using a fake provider
 data/                local user data, ignored by git

@@ -58,3 +58,15 @@ th, td { text-align: left; padding: 0.5rem 0.4rem; border-bottom: 1px solid var(
 .status-correct, .status-accepted { color: var(--good); font-weight: 600; }
 .status-wrong { color: var(--bad); font-weight: 600; }
 .status-skipped { color: var(--warn); font-weight: 600; }
+
+/* ---------- Dictation ---------- */
+h3 { font-size: 1rem; margin: 1.25rem 0 0.4rem; }
+.player { display: flex; flex-wrap: wrap; align-items: center; gap: 0.9rem; margin: 0.5rem 0 1rem; }
+label.inline { display: flex; align-items: center; gap: 0.4rem; font-weight: 400; }
+label.inline select { width: auto; max-width: 16rem; }
+.feedback { white-space: pre-wrap; }
+.sentence { padding: 0.6rem 0; border-top: 1px solid var(--line); }
+.sentence p { margin: 0.2rem 0; }
+.miss { background: color-mix(in srgb, var(--warn) 25%, transparent); border-bottom: 2px solid var(--warn); border-radius: 3px; }
+.extra { color: var(--bad); text-decoration: line-through; }
+#dict-restart { margin-top: 1rem; }

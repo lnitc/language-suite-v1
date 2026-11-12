@@ -38,7 +38,9 @@ class SpeechToText(Protocol):
 
 
 class TextToSpeech(Protocol):
-    """Mouth: turns text into audio. (Used from the voice features on.)"""
+    """Mouth: turns text into audio."""
+
+    media_type: str  # e.g. "audio/wav"
 
     async def synthesize(
         self, text: str, *, language: str | None = None, voice: str | None = None
