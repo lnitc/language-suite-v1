@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Language Suite</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <h1>Language Suite</h1>
+    <p id="model-info" class="muted"></p>
+  </header>
+
+  <nav aria-label="Features">
+    <button class="tab" disabled title="Coming soon">Conversation</button>
+    <button class="tab" disabled title="Coming soon">Job interview</button>
+    <button class="tab" disabled title="Coming soon">Interpreter</button>
+    <button class="tab active">Vocabulary</button>
+    <button class="tab" disabled title="Coming soon">Dictation</button>
+  </nav>
+
+  <main>
+    <p id="error" class="error" role="alert" hidden></p>
+
+    <!-- 1. Setup -->
+    <section id="setup">
+      <h2>Vocabulary practice</h2>
+      <form id="setup-form">
+        <div class="row">
+          <label>Show words in
+            <input id="source-language" required maxlength="60" placeholder="e.g. English">
+          </label>
+          <label>I answer in
+            <input id="target-language" required maxlength="60" placeholder="e.g. Japanese">
+          </label>
+        </div>
+        <div class="row">
+          <label>Type of training
+            <select id="mode">
+              <option value="text">Text</option>
+              <option value="voice" disabled>Voice (coming soon)</option>
+            </select>
+          </label>
+          <label>Number of words
+            <input id="count" type="number" min="1" max="50" value="10" required>
+          </label>
+        </div>
+        <label>System prompt <span class="muted">(optional: who the teacher is)</span>
+          <textarea id="system-prompt" rows="2" maxlength="2000"
+            placeholder="You are a careful, encouraging language teacher."></textarea>
+        </label>
+        <label>Session prompt <span class="muted">(optional: topic, level, word types)</span>
+          <textarea id="session-prompt" rows="2" maxlength="2000"
+            placeholder="e.g. Intermediate business vocabulary about meetings"></textarea>
+        </label>
+        <label>Word list file <span class="muted">(optional: .txt or .csv with words to practice)</span>
+          <input id="material" type="file" accept=".txt,.csv,.tsv,.md,text/plain">
+        </label>
+        <button id="start-button" type="submit" class="primary">Start session</button>
+      </form>
+    </section>
+
+    <!-- 2. Practice -->
+    <section id="practice" hidden>
+      <p id="progress" class="muted"></p>
+      <p id="direction" class="muted"></p>
+      <p id="word" class="word"></p>
+      <form id="answer-form">
+        <input id="answer" autocomplete="off" maxlength="300" placeholder="Type the translation">
+        <div class="row">
+          <button type="submit" class="primary">Submit</button>
+          <button type="button" id="skip-button">Skip (I don't know)</button>
+        </div>
+      </form>
+    </section>
+
+    <!-- 3. Results -->
+    <section id="results" hidden>
+      <h2>Results</h2>
+      <p id="score" class="score"></p>
+      <table>
+        <thead>
+          <tr><th>Word</th><th>Your translation</th><th>Correct translations</th><th>Result</th></tr>
+        </thead>
+        <tbody id="result-rows"></tbody>
+      </table>
+      <button id="restart-button" class="primary">New session</button>
+    </section>
+  </main>
+
+  <script src="vocabulary.js"></script>
+</body>
+</html>

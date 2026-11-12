@@ -1,0 +1,8 @@
+# Safety net: scans every commit for API keys and other secrets.
+# Setup (once):  pip install pre-commit  &&  pre-commit install
+# Update pins:   pre-commit autoupdate
+repos:
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.30.0
+    hooks:
+      - id: gitleaks

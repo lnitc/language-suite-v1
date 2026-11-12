@@ -1,0 +1,32 @@
+# --- Secrets: never commit these ---
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+
+# --- User data: recordings, uploads, session logs ---
+data/*
+!data/.gitkeep
+*.wav
+*.mp3
+*.ogg
+*.webm
+
+# --- Local models and voices (large, separately licensed) ---
+models/
+voices/
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+*.egg-info/
+
+# --- Editors / OS ---
+.vscode/
+.idea/
+Thumbs.db
+.DS_Store
