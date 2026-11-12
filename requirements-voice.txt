@@ -1,0 +1,5 @@
+# Optional: local speech recognition (the "ear") for the voice features.
+# Install with:  pip install -r requirements-voice.txt
+# faster-whisper is MIT-licensed. The Whisper model itself is downloaded
+# separately on first use (from Hugging Face) and is not part of this repository.
+faster-whisper>=1.0

@@ -9,6 +9,7 @@
   }
 }
 * { box-sizing: border-box; }
+[hidden] { display: none !important; }
 body {
   margin: 0 auto; padding: 1.5rem 1rem 3rem; max-width: 760px;
   font: 16px/1.5 system-ui, "Segoe UI", sans-serif;
@@ -70,3 +71,14 @@ label.inline select { width: auto; max-width: 16rem; }
 .miss { background: color-mix(in srgb, var(--warn) 25%, transparent); border-bottom: 2px solid var(--warn); border-radius: 3px; }
 .extra { color: var(--bad); text-decoration: line-through; }
 #dict-restart { margin-top: 1rem; }
+
+/* ---------- Voice features ---------- */
+.status { font-weight: 600; min-height: 1.5em; }
+button.mic { min-width: 9rem; font-weight: 600; border-color: var(--accent); color: var(--accent); }
+button.mic.recording { background: var(--bad); border-color: var(--bad); color: #fff; }
+button.mic:disabled, .player button:disabled { opacity: 0.5; cursor: not-allowed; }
+.transcript { margin: 0.75rem 0; padding: 0.25rem 0.9rem; border: 1px solid var(--line); border-radius: 8px; max-height: 22rem; overflow-y: auto; }
+.transcript p { margin: 0.5rem 0; }
+#talk-end, #interp-next { margin-top: 1rem; }
+.ideal { color: var(--good); }
+label.inline input[type="checkbox"] { width: auto; }

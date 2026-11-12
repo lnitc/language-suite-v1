@@ -17,6 +17,7 @@ from pydantic import BaseModel, Field
 from ..providers.base import ChatProvider, ProviderError
 from ..providers.factory import get_chat_provider
 from ..textutils import normalize, parse_json
+from .speech import clean_language_code
 
 router = APIRouter(prefix="/api/vocabulary", tags=["vocabulary"])
 
@@ -81,7 +82,7 @@ def _progress(session: Session) -> dict:
     }
 
 
-async def _generate_items(req: StartRequest, chat: ChatProvider) -> list[Item]:
+async def _generate_items(req: StartRequest, chat: ChatProvider) -> tuple[list[Item], dict]:
     material = req.material.strip()[:MAX_MATERIAL_CHARS]
     parts = [
         f"Create a vocabulary exercise with exactly {req.count} items.",
@@ -98,8 +99,10 @@ async def _generate_items(req: StartRequest, chat: ChatProvider) -> list[Item]:
             f"--- material ---\n{material}\n--- end material ---"
         )
     parts.append(
-        'Reply with JSON only, in this shape: {"items": [{"word": "...", '
-        '"translations": ["...", "..."]}]}. '
+        'Reply with JSON only, in this shape: {"source_language_code": "...", '
+        '"target_language_code": "...", "items": [{"word": "...", '
+        '"translations": ["...", "..."]}]}. The codes are BCP-47 codes such as '
+        '"en-US" or "ja-JP". '
         f'"word" is in {req.source_language}. "translations" lists every common '
         f"correct {req.target_language} translation (1 to 5), most usual first. "
         "No duplicates among the words."
@@ -111,9 +114,14 @@ async def _generate_items(req: StartRequest, chat: ChatProvider) -> list[Item]:
     raw = await chat.chat(messages, json_mode=True, temperature=0.8)
 
     try:
-        entries = parse_json(raw).get("items", [])
+        data = parse_json(raw)
     except ValueError:
-        entries = []
+        data = {}
+    entries = data.get("items", [])
+    codes = {
+        "source_language_code": clean_language_code(data.get("source_language_code")),
+        "target_language_code": clean_language_code(data.get("target_language_code")),
+    }
 
     items: list[Item] = []
     seen: set[str] = set()
@@ -138,7 +146,7 @@ async def _generate_items(req: StartRequest, chat: ChatProvider) -> list[Item]:
             "The model did not return a usable word list. Please try again; "
             "if it keeps happening, try a different model."
         )
-    return items
+    return items, codes
 
 
 async def _second_opinion(session: Session, chat: ChatProvider) -> None:
@@ -185,7 +193,7 @@ async def _second_opinion(session: Session, chat: ChatProvider) -> None:
 async def start_session(
     req: StartRequest, chat: ChatProvider = Depends(get_chat_provider)
 ) -> dict:
-    items = await _generate_items(req, chat)
+    items, codes = await _generate_items(req, chat)
     session_id = uuid.uuid4().hex
     _sessions[session_id] = Session(
         source_language=req.source_language,
@@ -195,7 +203,7 @@ async def start_session(
     )
     while len(_sessions) > MAX_SESSIONS:
         _sessions.popitem(last=False)
-    return {"session_id": session_id, **_progress(_sessions[session_id])}
+    return {"session_id": session_id, **codes, **_progress(_sessions[session_id])}
 
 
 @router.post("/sessions/{session_id}/answers")

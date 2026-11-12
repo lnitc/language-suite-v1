@@ -26,6 +26,12 @@ class Settings:
     tts_voice: str
     tts_api_key: str
     tts_timeout: float
+    stt_provider: str
+    stt_model: str
+    stt_device: str
+    stt_base_url: str
+    stt_api_key: str
+    stt_timeout: float
 
 
 def get_settings() -> Settings:
@@ -41,4 +47,10 @@ def get_settings() -> Settings:
         tts_voice=os.getenv("TTS_VOICE", ""),
         tts_api_key=os.getenv("TTS_API_KEY", ""),
         tts_timeout=float(os.getenv("TTS_TIMEOUT", "60")),
+        stt_provider=os.getenv("STT_PROVIDER", "faster_whisper"),
+        stt_model=os.getenv("STT_MODEL", "small"),
+        stt_device=os.getenv("STT_DEVICE", "cpu"),
+        stt_base_url=os.getenv("STT_BASE_URL", "").rstrip("/"),
+        stt_api_key=os.getenv("STT_API_KEY", ""),
+        stt_timeout=float(os.getenv("STT_TIMEOUT", "120")),
     )

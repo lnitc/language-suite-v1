@@ -50,13 +50,13 @@ document.querySelectorAll(".tab[data-feature]").forEach((tab) => {
       feature.hidden = feature.id !== `feature-${tab.dataset.feature}`;
     });
     showError("");
-    document.dispatchEvent(new CustomEvent("feature-change"));
+    document.dispatchEvent(new CustomEvent("feature-change", { detail: { ...tab.dataset } }));
   });
 });
 
 api("/api/health")
   .then((info) => {
     $("model-info").textContent =
-      `Model: ${info.llm_model} at ${info.llm_base_url} · Speech: ${info.tts_provider}`;
+      `Model: ${info.llm_model} at ${info.llm_base_url} · Voice: ${info.tts_provider} · Microphone: ${info.stt_provider}`;
   })
   .catch(() => {});

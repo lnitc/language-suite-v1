@@ -5,12 +5,12 @@ computer with free local models, or with a cloud AI service if you prefer.
 
 | Feature | Status |
 |---|---|
-| Vocabulary practice (text) | Ready |
+| Conversation partner (voice) | Ready |
+| Job interview rehearsal (voice) | Ready |
+| Interpreter simulation (voice) | Ready |
+| Vocabulary practice (text or voice) | Ready |
 | Dictation (typed) | Ready |
 | Dictation (handwritten, photo upload) | Planned |
-| Conversation partner (voice) | Planned |
-| Job interview rehearsal (voice) | Planned |
-| Interpreter simulation (voice) | Planned |
 
 ## How it works
 
@@ -20,7 +20,7 @@ can be local or cloud without changing the features.
 | Socket | Job | Local (free) | Cloud |
 |---|---|---|---|
 | Brain | Chat, questions, feedback | Ollama | Any OpenAI-style API |
-| Ear | Speech to text | Planned (separate install) | Planned |
+| Ear | Speech to text | Whisper on your PC (separate install) | Any OpenAI-style transcription API |
 | Mouth | Text to speech | Your browser's built-in voices (default) | Any OpenAI-style speech API |
 
 The app itself contains no models. Models and speech engines are installed
@@ -73,6 +73,13 @@ Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
 
 You need to run `.venv\Scripts\Activate.ps1` again each time you open a new
 PowerShell window.
+
+For the features that use the microphone, also install the local speech
+recognition (see "Microphone" below for details):
+
+```powershell
+pip install -r requirements-voice.txt
+```
 
 ### 4. Create your settings file
 
@@ -169,8 +176,57 @@ TTS_VOICE=<voice name, if the server needs one>
 TTS_API_KEY=<your own key, or empty for a local server>
 ```
 
-Speech to text (for the conversation features) is not needed yet. Its
-install steps will be added with the first feature that uses the microphone.
+## Microphone (speech to text)
+
+Conversation, job interview, interpreter and the voice mode of vocabulary
+record you with the microphone and turn the recording into text. Set the
+method with `STT_PROVIDER` in `.env`.
+
+| | `faster_whisper` (default) | `openai_compatible` |
+|---|---|---|
+| What listens | The Whisper model, running on your PC | A transcription server, local or cloud |
+| Install | `pip install -r requirements-voice.txt` | A server or a cloud account |
+| Privacy | Recordings stay on your PC | Cloud: recordings are sent to the provider |
+| Speed | A few seconds per turn on a modern CPU | Depends on the service |
+
+### Local Whisper
+
+1. Install it once, inside the activated environment:
+
+   ```powershell
+   pip install -r requirements-voice.txt
+   ```
+
+2. The first time you use the microphone, the model (about 0.5 GB for
+   `small`) is downloaded automatically. That first turn is slow; later ones
+   are not.
+
+Optional settings in `.env`:
+
+| Setting | Default | Meaning |
+|---|---|---|
+| `STT_MODEL` | `small` | `base` is faster and less accurate; `medium` is slower and more accurate |
+| `STT_DEVICE` | `cpu` | `cuda` uses the NVIDIA GPU, but needs extra NVIDIA libraries and shares graphics memory with the chat model. `cpu` is the safe choice |
+
+### Transcription server
+
+```ini
+STT_PROVIDER=openai_compatible
+STT_BASE_URL=<the server's API address, usually ending in /v1>
+STT_MODEL=<transcription model name>
+STT_API_KEY=<your own key, or empty for a local server>
+```
+
+### Using the microphone
+
+- Open the app at `http://localhost:8000` (not through another address):
+  browsers only allow the microphone on `localhost` or secure sites.
+- The first time, the browser asks for permission to use the microphone.
+- Press the microphone button, speak, and press it again when you finish.
+
+Good to know: speech recognition writes down what it believes you meant. It
+cannot judge pronunciation, and it sometimes tidies up small slips, so the
+feedback is about words, grammar and content.
 
 ## Troubleshooting
 
@@ -182,6 +238,11 @@ install steps will be added with the first feature that uses the microphone.
 | "rejected the API key" | Check `LLM_API_KEY` in `.env` |
 | "did not return a usable word list" or "dictation text" | Retry. If it repeats, try a larger model |
 | "This browser has no voice for ..." | Add the language in Windows (see Voices), or use a speech server |
+| "Local speech recognition is not installed" | Run `pip install -r requirements-voice.txt` in the activated environment |
+| "Could not load the Whisper model" | The first use needs internet for the download. Check `STT_MODEL` |
+| "The microphone is blocked or missing" | Click the padlock or microphone icon in the address bar and allow the microphone. Check Windows Settings > Privacy & security > Microphone |
+| "No words were recognised" | Speak closer to the microphone, or check that Windows uses the right input device |
+| The partner's voice is silent | Check the PC volume, pick another voice in the Voice list, or try Edge |
 | Dictation is silent | Check the PC volume, pick another voice in the Voice list, or try Edge |
 
 ## For developers
@@ -194,11 +255,15 @@ app/
   config.py          settings from environment variables / .env
   providers/
     base.py          the three interfaces: ChatProvider, SpeechToText, TextToSpeech
-    openai_compatible.py   brain and mouth for Ollama and OpenAI-style APIs
+    openai_compatible.py   brain, ear and mouth for Ollama and OpenAI-style APIs
+    faster_whisper.py      ear: local Whisper (optional install)
     factory.py       picks the provider named in the settings
   features/
+    talk.py          Features 1 and 2 (conversation, job interview)
+    interpreter.py   Feature 3
     vocabulary.py    Feature 4
     dictation.py     Feature 5
+    speech.py        shared speech endpoints (transcribe, synthesize)
   textutils.py       shared text helpers (answer matching, dictation marking)
   static/            browser UI (plain HTML, CSS, JavaScript)
 tests/               run without any model, using a fake provider

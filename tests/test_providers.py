@@ -123,3 +123,41 @@ def test_speech_factory(monkeypatch):
     monkeypatch.setenv("TTS_PROVIDER", "nonsense")
     with pytest.raises(ProviderError, match="browser"):
         get_speech_provider()
+
+
+def test_transcription_uploads_audio_and_reads_text():
+    from app.providers.openai_compatible import OpenAICompatibleTranscription
+
+    seen = {}
+
+    def handler(request):
+        seen["url"] = str(request.url)
+        seen["auth"] = request.headers.get("authorization")
+        seen["body"] = request.content
+        return httpx.Response(200, json={"text": " konnichiwa "})
+
+    ear = OpenAICompatibleTranscription(
+        base_url="http://ear.test/v1",
+        model="some-ear-model",
+        api_key=FAKE_KEY,
+        transport=httpx.MockTransport(handler),
+    )
+    text = asyncio.run(ear.transcribe(b"AUDIOBYTES", language="ja", content_type="audio/ogg"))
+    assert text == "konnichiwa"
+    assert seen["url"] == "http://ear.test/v1/audio/transcriptions"
+    assert seen["auth"] == f"Bearer {FAKE_KEY}"
+    assert b"AUDIOBYTES" in seen["body"] and b'filename="speech.ogg"' in seen["body"]
+    assert b"some-ear-model" in seen["body"] and b"ja" in seen["body"]
+
+
+def test_transcription_factory(monkeypatch):
+    from app.providers.factory import get_transcription_provider
+    from app.providers.faster_whisper import FasterWhisperTranscription
+
+    monkeypatch.setenv("STT_PROVIDER", "faster_whisper")
+    assert isinstance(get_transcription_provider(), FasterWhisperTranscription)  # loads nothing yet
+
+    monkeypatch.setenv("STT_PROVIDER", "openai_compatible")
+    monkeypatch.setenv("STT_BASE_URL", "")
+    with pytest.raises(ProviderError, match="STT_BASE_URL"):
+        get_transcription_provider()

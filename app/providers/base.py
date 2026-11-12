@@ -12,7 +12,9 @@ from typing import Protocol, TypedDict
 
 class Message(TypedDict):
     role: str  # "system" | "user" | "assistant"
-    content: str
+    # Plain text, or OpenAI-style parts when an image is attached:
+    # [{"type": "text", "text": "..."}, {"type": "image_url", "image_url": {"url": "data:..."}}]
+    content: str | list[dict]
 
 
 class ProviderError(Exception):
@@ -32,9 +34,15 @@ class ChatProvider(Protocol):
 
 
 class SpeechToText(Protocol):
-    """Ear: turns recorded audio into text. (Used from the voice features on.)"""
+    """Ear: turns recorded audio into text."""
 
-    async def transcribe(self, audio: bytes, *, language: str | None = None) -> str: ...
+    async def transcribe(
+        self,
+        audio: bytes,
+        *,
+        language: str | None = None,  # two-letter code such as "ja", or None to detect
+        content_type: str = "audio/webm",
+    ) -> str: ...
 
 
 class TextToSpeech(Protocol):

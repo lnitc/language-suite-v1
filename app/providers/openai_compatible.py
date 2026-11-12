@@ -15,18 +15,27 @@ async def _post(
     *,
     base_url: str,
     path: str,
-    payload: dict,
+    payload: dict | None = None,
     api_key: str,
     timeout: float,
     transport: httpx.AsyncBaseTransport | None,
     model: str,
     what: str,
+    form: dict | None = None,
+    files: dict | None = None,
 ) -> httpx.Response:
     """POST with friendly errors. Messages never include the key or headers."""
     headers = {"Authorization": f"Bearer {api_key}"} if api_key else {}
     try:
         async with httpx.AsyncClient(timeout=timeout, transport=transport) as client:
-            response = await client.post(f"{base_url}{path}", json=payload, headers=headers)
+            if files is not None:
+                response = await client.post(
+                    f"{base_url}{path}", data=form, files=files, headers=headers
+                )
+            else:
+                response = await client.post(
+                    f"{base_url}{path}", json=payload, headers=headers
+                )
     except httpx.ConnectError as exc:
         raise ProviderError(
             f"Could not reach the {what} server at {base_url}. "
@@ -146,3 +155,59 @@ class OpenAICompatibleSpeech:
         if not response.content:
             raise ProviderError("The speech server returned no audio.")
         return response.content
+
+
+_AUDIO_EXTENSIONS = {
+    "audio/webm": "webm",
+    "audio/ogg": "ogg",
+    "audio/mp4": "mp4",
+    "audio/mpeg": "mp3",
+    "audio/wav": "wav",
+    "audio/x-wav": "wav",
+}
+
+
+class OpenAICompatibleTranscription:
+    """Ear: POST {base_url}/audio/transcriptions (multipart upload)."""
+
+    def __init__(
+        self,
+        *,
+        base_url: str,
+        model: str,
+        api_key: str = "",
+        timeout: float = 120.0,
+        transport: httpx.AsyncBaseTransport | None = None,
+    ) -> None:
+        self._base_url = base_url.rstrip("/")
+        self._model = model
+        self._api_key = api_key
+        self._timeout = timeout
+        self._transport = transport
+
+    async def transcribe(
+        self,
+        audio: bytes,
+        *,
+        language: str | None = None,
+        content_type: str = "audio/webm",
+    ) -> str:
+        extension = _AUDIO_EXTENSIONS.get(content_type, "webm")
+        form = {"model": self._model, "response_format": "json"}
+        if language:
+            form["language"] = language
+        response = await _post(
+            base_url=self._base_url,
+            path="/audio/transcriptions",
+            form=form,
+            files={"file": (f"speech.{extension}", audio, content_type)},
+            api_key=self._api_key,
+            timeout=self._timeout,
+            transport=self._transport,
+            model=self._model,
+            what="speech recognition",
+        )
+        try:
+            return str(response.json()["text"]).strip()
+        except (ValueError, KeyError, TypeError) as exc:
+            raise ProviderError("The speech recognition server sent an unexpected reply.") from exc

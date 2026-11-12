@@ -7,7 +7,6 @@ they hear, plain code marks every word, and the model writes the feedback.
 
 from __future__ import annotations
 
-import re
 import uuid
 from collections import OrderedDict
 from dataclasses import dataclass, field
@@ -20,6 +19,7 @@ from pydantic import BaseModel, Field, StringConstraints
 from ..providers.base import ChatProvider, ProviderError, TextToSpeech
 from ..providers.factory import get_chat_provider, get_speech_provider
 from ..textutils import compare, parse_json
+from .speech import clean_language_code
 
 router = APIRouter(prefix="/api/dictation", tags=["dictation"])
 
@@ -34,7 +34,6 @@ DIFFICULTIES = {
     "upper_intermediate": "Upper-intermediate (CEFR B2): longer sentences, wider vocabulary",
     "advanced": "Advanced (CEFR C1): complex sentences, rich vocabulary",
 }
-_LANGUAGE_CODE = re.compile(r"^[A-Za-z]{2,3}(-[A-Za-z0-9]{2,8}){0,2}$")
 
 
 @dataclass
@@ -112,8 +111,7 @@ async def _generate_text(req: StartRequest, chat: ChatProvider) -> tuple[list[st
             "The model did not return a usable dictation text. Please try again; "
             "if it keeps happening, try a different model."
         )
-    code = str(data.get("language_code", "")).strip()
-    return sentences, code if _LANGUAGE_CODE.match(code) else ""
+    return sentences, clean_language_code(data.get("language_code"))
 
 
 async def _teacher_feedback(

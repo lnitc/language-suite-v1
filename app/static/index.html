@@ -14,9 +14,9 @@
   </header>
 
   <nav aria-label="Features">
-    <button class="tab" disabled title="Coming soon">Conversation</button>
-    <button class="tab" disabled title="Coming soon">Job interview</button>
-    <button class="tab" disabled title="Coming soon">Interpreter</button>
+    <button class="tab" data-feature="talk" data-kind="conversation">Conversation</button>
+    <button class="tab" data-feature="talk" data-kind="interview">Job interview</button>
+    <button class="tab" data-feature="interpreter">Interpreter</button>
     <button class="tab active" data-feature="vocabulary">Vocabulary</button>
     <button class="tab" data-feature="dictation">Dictation</button>
   </nav>
@@ -41,7 +41,7 @@
             <label>Type of training
               <select id="mode">
                 <option value="text">Text</option>
-                <option value="voice" disabled>Voice (coming soon)</option>
+                <option value="voice">Voice</option>
               </select>
             </label>
             <label>Number of words
@@ -67,6 +67,10 @@
         <p id="progress" class="muted"></p>
         <p id="direction" class="muted"></p>
         <p id="word" class="word"></p>
+        <div class="player" id="vocab-voice-tools" hidden>
+          <button type="button" id="vocab-hear">↻ Hear the word</button>
+          <button type="button" id="vocab-mic" class="mic"></button>
+        </div>
         <form id="answer-form">
           <input id="answer" autocomplete="off" maxlength="300" placeholder="Type the translation">
           <div class="row">
@@ -86,6 +90,140 @@
           <tbody id="result-rows"></tbody>
         </table>
         <button id="restart-button" class="primary">New session</button>
+      </section>
+    </div>
+
+    <!-- ================= Conversation and job interview ================= -->
+    <div class="feature" id="feature-talk" hidden>
+      <section id="talk-setup">
+        <h2 id="talk-title">Conversation partner</h2>
+        <form id="talk-setup-form">
+          <div class="row">
+            <label>Language
+              <input id="talk-language" required maxlength="60" placeholder="e.g. English">
+            </label>
+            <label>Difficulty
+              <select id="talk-difficulty"></select>
+            </label>
+          </div>
+          <label id="talk-questions-label" hidden>Number of questions
+            <input id="talk-questions" type="number" min="1" max="20" value="5">
+          </label>
+          <label>System prompt <span class="muted">(optional: who you are talking to)</span>
+            <textarea id="talk-system-prompt" rows="2" maxlength="2000"></textarea>
+          </label>
+          <label>Session prompt <span class="muted">(optional: topic, focus)</span>
+            <textarea id="talk-session-prompt" rows="2" maxlength="2000"></textarea>
+          </label>
+          <label>Material <span class="muted">(optional: a text file or an image, up to 5 MB)</span>
+            <input id="talk-material" type="file" accept=".txt,.md,.csv,text/plain,image/png,image/jpeg,image/webp">
+          </label>
+          <button id="talk-start" type="submit" class="primary">Start session</button>
+        </form>
+      </section>
+
+      <section id="talk-live" hidden>
+        <p id="talk-status" class="status" aria-live="polite"></p>
+        <div class="player">
+          <button type="button" id="talk-mic" class="mic"></button>
+          <button type="button" id="talk-repeat">↻ Repeat</button>
+          <label class="inline">Speed
+            <select id="talk-speed">
+              <option value="0.8">Slow</option>
+              <option value="1" selected>Normal</option>
+              <option value="1.2">Fast</option>
+            </select>
+          </label>
+          <label class="inline" id="talk-voice-label" hidden>Voice
+            <select id="talk-voice"></select>
+          </label>
+        </div>
+        <label class="inline"><input type="checkbox" id="talk-show-text"> Show the conversation as text</label>
+        <div id="talk-transcript" class="transcript" hidden></div>
+        <button type="button" id="talk-end">End session and get feedback</button>
+      </section>
+
+      <section id="talk-results" hidden>
+        <h2>Feedback</h2>
+        <p id="talk-feedback" class="feedback"></p>
+        <h3>What was said</h3>
+        <div id="talk-final-transcript" class="transcript"></div>
+        <div class="player">
+          <button id="talk-restart" class="primary">New session</button>
+          <button type="button" id="talk-download">⬇ Download script and feedback</button>
+        </div>
+      </section>
+    </div>
+
+    <!-- ================= Interpreter ================= -->
+    <div class="feature" id="feature-interpreter" hidden>
+      <section id="interp-setup">
+        <h2>Interpreter simulation</h2>
+        <form id="interp-setup-form">
+          <div class="row">
+            <label>You hear
+              <input id="interp-source" required maxlength="60" placeholder="e.g. English">
+            </label>
+            <label>You interpret into
+              <input id="interp-target" required maxlength="60" placeholder="e.g. Japanese">
+            </label>
+          </div>
+          <label>Difficulty
+            <select id="interp-difficulty">
+              <option value="beginner">Beginner (A1)</option>
+              <option value="elementary">Elementary (A2)</option>
+              <option value="intermediate" selected>Intermediate (B1)</option>
+              <option value="upper_intermediate">Upper-intermediate (B2)</option>
+              <option value="advanced">Advanced (C1)</option>
+            </select>
+          </label>
+          <div class="row">
+            <label>Sentences before you interpret
+              <input id="interp-per-batch" type="number" min="1" max="5" value="2" required>
+            </label>
+            <label>Number of parts
+              <input id="interp-batch-count" type="number" min="1" max="10" value="4" required>
+            </label>
+          </div>
+          <label>System prompt <span class="muted">(optional: who the trainer is)</span>
+            <textarea id="interp-system-prompt" rows="2" maxlength="2000"
+              placeholder="You are an experienced interpreter trainer."></textarea>
+          </label>
+          <label>Session prompt <span class="muted">(optional: topic, setting)</span>
+            <textarea id="interp-session-prompt" rows="2" maxlength="2000"
+              placeholder="e.g. A company president's speech about the new factory"></textarea>
+          </label>
+          <button id="interp-start" type="submit" class="primary">Start session</button>
+        </form>
+      </section>
+
+      <section id="interp-live" hidden>
+        <p id="interp-progress" class="muted"></p>
+        <p id="interp-status" class="status" aria-live="polite"></p>
+        <div class="player">
+          <button type="button" id="interp-play" class="primary">▶ Play</button>
+          <button type="button" id="interp-mic" class="mic"></button>
+          <label class="inline">Speed
+            <select id="interp-speed">
+              <option value="0.8">Slow</option>
+              <option value="1" selected>Normal</option>
+              <option value="1.2">Fast</option>
+            </select>
+          </label>
+          <label class="inline" id="interp-voice-label" hidden>Voice
+            <select id="interp-voice"></select>
+          </label>
+        </div>
+        <p id="interp-said-box" hidden><span class="muted">The app heard:</span> <span id="interp-said"></span></p>
+        <button type="button" id="interp-next">Next part →</button>
+      </section>
+
+      <section id="interp-results" hidden>
+        <h2>Feedback</h2>
+        <p id="interp-overall" class="feedback"></p>
+        <h3>Part by part</h3>
+        <div id="interp-batches"></div>
+        <button id="interp-restart" class="primary">New session</button>
       </section>
     </div>
 
@@ -170,7 +308,10 @@
   </main>
 
   <script src="common.js"></script>
+  <script src="voice.js"></script>
   <script src="vocabulary.js"></script>
+  <script src="talk.js"></script>
+  <script src="interpreter.js"></script>
   <script src="dictation.js"></script>
 </body>
 </html>

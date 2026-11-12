@@ -16,6 +16,21 @@
 
   let sessionId = null;
   let languages = { source: "", target: "" };
+  let codes = { source: "", target: "" };
+  let voiceMode = false;
+
+  // Voice mode: the word is also spoken, and the answer can be said aloud.
+  const mic = voice.attachMic($("vocab-mic"), {
+    language: () => codes.target,
+    onText: async (text) => {
+      $("answer").value = text.replace(/[.。!?！？]+$/u, "");
+      $("answer").focus();
+    },
+  });
+
+  function speakWord() {
+    voice.speak($("word").textContent, codes.source).catch((error) => showError(error.message));
+  }
 
   function show(name) {
     for (const [key, el] of Object.entries(views)) el.hidden = key !== name;
@@ -27,6 +42,7 @@
     $("word").textContent = progress.word;
     $("answer").value = "";
     $("answer").focus();
+    if (voiceMode) speakWord();
   }
 
   async function advance(progress) {
@@ -88,6 +104,12 @@
         }),
       });
       sessionId = progress.session_id;
+      codes = { source: progress.source_language_code, target: progress.target_language_code };
+      voiceMode = $("mode").value === "voice";
+      $("vocab-voice-tools").hidden = !voiceMode;
+      $("answer").placeholder = voiceMode
+        ? "Say the translation with the microphone, or type it"
+        : "Type the translation";
       show("practice");
       showWord(progress);
     } catch (error) {
@@ -100,6 +122,8 @@
 
   async function sendAnswer(skip) {
     showError("");
+    voice.stop();
+    await mic.reset();
     try {
       const progress = await api(`/api/vocabulary/sessions/${sessionId}/answers`, {
         method: "POST",
@@ -116,6 +140,8 @@
     sendAnswer(false);
   });
   $("skip-button").addEventListener("click", () => sendAnswer(true));
+  $("vocab-hear").addEventListener("click", speakWord);
+  document.addEventListener("feature-change", () => { mic.reset(); });
   $("restart-button").addEventListener("click", () => {
     sessionId = null;
     showError("");
