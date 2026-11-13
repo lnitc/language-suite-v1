@@ -182,6 +182,8 @@
     button.disabled = true;
     button.textContent = "Writing the text…";
     try {
+      const { text: material, note } = await readMaterial($("dict-material").files[0]);
+      showNote("dict-note", note);
       const started = await api("/api/dictation/sessions", {
         method: "POST",
         body: JSON.stringify({
@@ -190,6 +192,7 @@
           length: $("dict-length").value,
           system_prompt: $("dict-system-prompt").value,
           session_prompt: $("dict-session-prompt").value,
+          material,
         }),
       });
       Object.values(audioUrls).forEach((url) => URL.revokeObjectURL(url));

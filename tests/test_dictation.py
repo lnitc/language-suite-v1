@@ -172,3 +172,18 @@ def test_validation(client):
     assert start(client, difficulty="impossible").status_code == 422
     assert start(client, language="").status_code == 422
     assert client.post("/api/dictation/sessions/nope/submit", json={"answers": []}).status_code == 404
+
+
+def test_uploaded_material_reaches_the_model_and_is_capped(client):
+    fake = FakeChat([TEXT, TEXT])
+    use(fake)
+    start(client, material="bridge\nmountain\nriver")
+    prompt = fake.calls[0][1]["content"]
+    assert "--- material ---\nbridge\nmountain\nriver\n--- end material ---" in prompt
+
+    start(client)  # no upload: no material section at all
+    assert "material" not in fake.calls[1][1]["content"]
+
+    fake.replies.append(TEXT)
+    start(client, material="x" * 20000)
+    assert fake.calls[2][1]["content"].count("x" * 100) and "x" * 8001 not in fake.calls[2][1]["content"]

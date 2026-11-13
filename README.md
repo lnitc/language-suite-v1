@@ -139,8 +139,8 @@ stop the app. It only listens on your own computer, not on the network.
 
 ## Uploading material
 
-The conversation, job interview and vocabulary features accept a file, for
-example a CV, a job description, an article or a word list.
+The conversation, job interview, vocabulary and dictation features accept a
+file, for example a CV, a job description, an article or a word list.
 
 | File type | Supported | Notes |
 |---|---|---|

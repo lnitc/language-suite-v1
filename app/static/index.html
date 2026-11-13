@@ -14,10 +14,10 @@
   </header>
 
   <nav aria-label="Features">
-    <button class="tab" data-feature="talk" data-kind="conversation">Conversation</button>
+    <button class="tab active" data-feature="talk" data-kind="conversation">Conversation</button>
     <button class="tab" data-feature="talk" data-kind="interview">Job interview</button>
     <button class="tab" data-feature="interpreter">Interpreter</button>
-    <button class="tab active" data-feature="vocabulary">Vocabulary</button>
+    <button class="tab" data-feature="vocabulary">Vocabulary</button>
     <button class="tab" data-feature="dictation">Dictation</button>
   </nav>
 
@@ -25,7 +25,7 @@
     <p id="error" class="error" role="alert" hidden></p>
 
     <!-- ================= Vocabulary ================= -->
-    <div class="feature" id="feature-vocabulary">
+    <div class="feature" id="feature-vocabulary" hidden>
       <section id="vocab-setup">
         <h2>Vocabulary practice</h2>
         <form id="setup-form">
@@ -95,7 +95,7 @@
     </div>
 
     <!-- ================= Conversation and job interview ================= -->
-    <div class="feature" id="feature-talk" hidden>
+    <div class="feature" id="feature-talk">
       <section id="talk-setup">
         <h2 id="talk-title">Conversation partner</h2>
         <form id="talk-setup-form">
@@ -264,11 +264,15 @@
             <textarea id="dict-session-prompt" rows="2" maxlength="2000"
               placeholder="e.g. A short story about a trip to the mountains"></textarea>
           </label>
+          <label>Material <span class="muted">(optional: a word list or a text to build the dictation from, as text, .csv, PDF or Word (.docx))</span>
+            <input id="dict-material" type="file" accept=".txt,.csv,.tsv,.md,.pdf,.docx,.doc,text/plain,application/pdf">
+          </label>
           <button id="dict-start-button" type="submit" class="primary">Start session</button>
         </form>
       </section>
 
       <section id="dict-practice" hidden>
+        <p id="dict-note" class="note" hidden></p>
         <p id="dict-progress" class="muted"></p>
         <div class="player">
           <button type="button" id="dict-play" class="primary">▶ Play</button>

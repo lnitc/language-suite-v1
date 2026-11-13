@@ -26,6 +26,7 @@ router = APIRouter(prefix="/api/dictation", tags=["dictation"])
 DEFAULT_SYSTEM_PROMPT = "You are a careful, encouraging language teacher."
 MAX_SESSIONS = 50
 MAX_SENTENCE_CHARS = 400
+MAX_MATERIAL_CHARS = 8000
 SENTENCE_COUNTS = {"short": 3, "medium": 6, "long": 10}
 DIFFICULTIES = {
     "beginner": "Beginner (CEFR A1): very short sentences, only the most common words",
@@ -58,6 +59,7 @@ class StartRequest(BaseModel):
     length: Literal["short", "medium", "long"] = "medium"
     system_prompt: str = Field(default="", max_length=2000)
     session_prompt: str = Field(default="", max_length=2000)
+    material: str = Field(default="", max_length=200_000)
 
 
 class SubmitRequest(BaseModel):
@@ -80,6 +82,16 @@ async def _generate_text(req: StartRequest, chat: ChatProvider) -> tuple[list[st
     ]
     if req.session_prompt.strip():
         parts.append(f"Learner's instructions for this session: {req.session_prompt.strip()}")
+    material = req.material.strip()[:MAX_MATERIAL_CHARS]
+    if material:
+        parts.append(
+            "The learner uploaded the material below. If it is a list of words or "
+            "phrases, use as many of them as fit naturally in the text. If it is a "
+            "text, base the dictation on its content and vocabulary, in your own "
+            f"sentences at the requested level. Entries not in {req.language} "
+            f"should be used in their {req.language} form.\n"
+            f"--- material ---\n{material}\n--- end material ---"
+        )
     parts.append(
         "The sentences will be read aloud, so use natural spoken-style prose: "
         "no lists, no abbreviations, no symbols, and spell numbers out in words."
