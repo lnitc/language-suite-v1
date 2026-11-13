@@ -270,6 +270,12 @@
             <textarea id="dict-session-prompt" rows="2" maxlength="2000"
               placeholder="e.g. A short story about a trip to the mountains"></textarea>
           </label>
+          <label>How you write
+            <select id="dict-input">
+              <option value="keyboard">Keyboard</option>
+              <option value="handwriting">By hand (upload a photo at the end)</option>
+            </select>
+          </label>
           <label>Material <span class="muted">(optional: a word list or a text to build the dictation from, as text, .csv, PDF or Word (.docx))</span>
             <input id="dict-material" type="file" accept=".txt,.csv,.tsv,.md,.pdf,.docx,.doc,text/plain,application/pdf">
           </label>
@@ -294,15 +300,40 @@
           </label>
         </div>
         <form id="dict-answer-form">
-          <label>Type what you hear
+          <label id="dict-answer-label">Type what you hear
             <textarea id="dict-answer" rows="3" maxlength="2000" autocomplete="off"
               autocapitalize="off" spellcheck="false"></textarea>
           </label>
+          <p id="dict-paper-hint" class="status" hidden>Write this sentence on paper, then go on.</p>
           <p class="muted">Punctuation and capital letters are not marked.</p>
           <div class="row">
             <button type="button" id="dict-back">← Previous</button>
             <button type="submit" id="dict-next" class="primary">Next sentence →</button>
           </div>
+        </form>
+      </section>
+
+      <section id="dict-upload" hidden>
+        <h2>Upload your handwriting</h2>
+        <p>Take a photo of your page (or scan it) and choose the file. Up to four
+          pages, in order. A sharp, straight, well-lit photo is read best.</p>
+        <form id="dict-photo-form">
+          <label>Photo of your dictation <span class="muted">(PNG, JPEG or WebP)</span>
+            <input id="dict-photos" type="file" accept="image/png,image/jpeg,image/webp" multiple required>
+          </label>
+          <div class="row">
+            <button type="button" id="dict-upload-back">← Back to the sentences</button>
+            <button type="submit" class="primary" id="dict-read">Read my handwriting</button>
+          </div>
+        </form>
+        <form id="dict-review-form" hidden>
+          <label>This is how the app read your handwriting
+            <textarea id="dict-hand-text" rows="8" maxlength="20000" spellcheck="false"></textarea>
+          </label>
+          <p class="note">Compare this with your page before it is marked. Where the app
+            misread your writing, change it to what you really wrote. Leave your own
+            mistakes as they are. [?] marks a word the app could not read.</p>
+          <button type="submit" class="primary">Check my dictation</button>
         </form>
       </section>
 

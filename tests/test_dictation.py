@@ -187,3 +187,70 @@ def test_uploaded_material_reaches_the_model_and_is_capped(client):
     fake.replies.append(TEXT)
     start(client, material="x" * 20000)
     assert fake.calls[2][1]["content"].count("x" * 100) and "x" * 8001 not in fake.calls[2][1]["content"]
+
+
+# ---------- handwriting ----------
+
+from app.textutils import split_by_sentence  # noqa: E402
+
+SENTENCES = ["The cat sat on the mat.", "It was a sunny day!", "We walked to the old bridge."]
+
+
+def test_split_by_sentence_follows_the_original_even_with_mistakes():
+    # No punctuation, a wrong first word, misspellings, a missing word and an extra one.
+    text = "The cat sat on mat Is was a suny day We walkd to the very old bridge"
+    assert split_by_sentence(SENTENCES, text) == [
+        "The cat sat on mat",
+        "Is was a suny day",
+        "We walkd to the very old bridge",
+    ]
+
+
+def test_split_by_sentence_edge_cases():
+    assert split_by_sentence(SENTENCES, "") == ["", "", ""]
+    assert split_by_sentence(SENTENCES, "It was a sunny day.") == ["", "It was a sunny day.", ""]
+    # Nothing matches at all: the words are spread out in order, and none is lost.
+    assert " ".join(split_by_sentence(SENTENCES, "xx yy zz")).split() == ["xx", "yy", "zz"]
+    # Languages written without spaces are cut character by character.
+    assert split_by_sentence(["今日は晴れです。", "明日は雨です。"], "今日は晴れです明日わ雨です") == [
+        "今日は晴れです",
+        "明日わ雨です",
+    ]
+
+
+def test_handwriting_is_read_without_showing_the_model_the_original(client):
+    fake = FakeChat([TEXT, "The cat sat on mat\nIt was a suny day\nExtra one [?]", "Mind your spelling."])
+    use(fake)
+    sid = start(client).json()["session_id"]
+    url = f"/api/dictation/sessions/{sid}"
+    photo = "data:image/jpeg;base64,AAAA"
+
+    read = client.post(f"{url}/handwriting", json={"images": [photo, photo]})
+    assert read.json() == {"text": "The cat sat on mat\nIt was a suny day\nExtra one [?]"}
+    system, user = fake.calls[1]
+    assert user["content"][1:] == [{"type": "image_url", "image_url": {"url": photo}}] * 2
+    prompt = system["content"] + user["content"][0]["text"]
+    assert "do not correct" in prompt and "English" in prompt
+    for sentence in ("The cat sat on the mat.", "It was a sunny day!"):
+        assert sentence not in prompt  # the model must not see the answer
+
+    result = client.post(f"{url}/submit", json={"full_text": read.json()["text"]}).json()
+    assert [row["typed"] and " ".join(t["text"] for t in row["typed"]) for row in result["sentences"]] == [
+        "The cat sat on mat",
+        "It was a suny day",
+        "Extra one [?]",
+    ]
+    assert [(row["correct"], row["total"]) for row in result["sentences"]] == [(5, 6), (4, 5), (2, 2)]
+    assert result["feedback"] == "Mind your spelling."
+
+
+def test_handwriting_input_checks_and_model_without_vision(client):
+    use(FakeChat([TEXT, ProviderError("The model server returned an error (HTTP 400)."), "  "]))
+    url = f"/api/dictation/sessions/{start(client).json()['session_id']}/handwriting"
+    assert client.post(url, json={"images": []}).status_code == 422
+    assert client.post(url, json={"images": ["data:text/plain;base64,AAAA"]}).status_code == 422
+    photo = {"images": ["data:image/png;base64,AAAA"]}
+    failed = client.post(url, json=photo)
+    assert failed.status_code == 502 and "can read images" in failed.json()["detail"]
+    empty = client.post(url, json=photo)
+    assert empty.status_code == 502 and "no text" in empty.json()["detail"]

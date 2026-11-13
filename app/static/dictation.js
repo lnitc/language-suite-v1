@@ -5,6 +5,7 @@
   const views = {
     setup: $("dict-setup"),
     practice: $("dict-practice"),
+    upload: $("dict-upload"),
     results: $("dict-results"),
   };
   const player = new Audio(); // used when a speech server makes the audio
@@ -17,6 +18,7 @@
   let played = [];
   let audioUrls = {};
   let finished = null; // the last result, for the download
+  let handwriting = false; // true: written on paper and uploaded as a photo
 
   function show(name) {
     for (const [key, el] of Object.entries(views)) el.hidden = key !== name;
@@ -111,25 +113,31 @@
     $("dict-play").textContent = played[index] ? "↻ Repeat" : "▶ Play";
     $("dict-answer").value = answers[index] || "";
     $("dict-back").disabled = index === 0;
-    $("dict-next").textContent = index === total - 1 ? "Finish and check" : "Next sentence →";
-    $("dict-answer").focus();
+    const last = index === total - 1;
+    if (handwriting) {
+      $("dict-next").textContent = last ? "I have finished writing →" : "Next sentence →";
+      $("dict-next").focus();
+    } else {
+      $("dict-next").textContent = last ? "Finish and check" : "Next sentence →";
+      $("dict-answer").focus();
+    }
     if (autoplay && !played[index]) play();
   }
 
-  async function finish() {
-    setBusy(views.practice, "Checking your dictation…");
+  async function finish(section, body) {
+    setBusy(section, "Checking your dictation…");
     try {
       const result = await api(`/api/dictation/sessions/${sessionId}/submit`, {
         method: "POST",
-        body: JSON.stringify({ answers }),
+        body: JSON.stringify(body),
       });
-      finished = { result, date: new Date() };
+      finished = { result, date: new Date(), handwriting };
       renderResults(result);
       show("results");
     } catch (error) {
       showError(error.message);
     } finally {
-      setBusy(views.practice, null);
+      setBusy(section, null);
     }
   }
 
@@ -139,7 +147,7 @@
     title.className = "muted";
     title.textContent = `${label} `;
     line.appendChild(title);
-    if (tokens.length === 0) line.append("(nothing typed)");
+    if (tokens.length === 0) line.append("(nothing written)");
     tokens.forEach((token, i) => {
       const span = document.createElement("span");
       span.textContent = token.text; // textContent: never run as HTML
@@ -166,7 +174,7 @@
       block.append(
         heading,
         tokenLine("Original:", row.expected, row.joiner, "miss"),
-        tokenLine("You typed:", row.typed, row.joiner, "extra")
+        tokenLine(handwriting ? "You wrote:" : "You typed:", row.typed, row.joiner, "extra")
       );
       container.appendChild(block);
     }
@@ -202,6 +210,12 @@
       answers = new Array(total).fill("");
       played = new Array(total).fill(false);
       audioUrls = {};
+      handwriting = $("dict-input").value === "handwriting";
+      $("dict-answer-label").hidden = handwriting;
+      $("dict-paper-hint").hidden = !handwriting;
+      $("dict-photo-form").reset();
+      $("dict-review-form").hidden = true;
+      $("dict-read").textContent = "Read my handwriting";
       $("dict-voice-label").hidden = true;
       show("practice");
       fillVoices();
@@ -221,7 +235,8 @@
     answers[index] = $("dict-answer").value;
     if (index === total - 1) {
       stopAudio();
-      finish();
+      if (handwriting) show("upload");
+      else finish(views.practice, { answers });
     } else {
       index += 1;
       showSentence(true);
@@ -242,6 +257,48 @@
     showSentence(false);
   });
 
+  // ---------- handwriting ----------
+
+  $("dict-upload-back").addEventListener("click", () => {
+    showError("");
+    show("practice");
+    showSentence(false);
+  });
+
+  // Step 1: the model reads the photo. Step 2: the learner checks the reading.
+  $("dict-photo-form").addEventListener("submit", async (event) => {
+    event.preventDefault();
+    showError("");
+    const files = [...$("dict-photos").files];
+    if (files.length > 4) {
+      showError("Please choose at most four photos.");
+      return;
+    }
+    setBusy(views.upload, "Reading your handwriting…");
+    try {
+      const images = [];
+      for (const file of files) images.push(await photoToDataUrl(file));
+      const read = await api(`/api/dictation/sessions/${sessionId}/handwriting`, {
+        method: "POST",
+        body: JSON.stringify({ images }),
+      });
+      $("dict-hand-text").value = read.text;
+      $("dict-review-form").hidden = false;
+      $("dict-read").textContent = "Read again";
+    } catch (error) {
+      showError(error.message);
+    } finally {
+      setBusy(views.upload, null);
+    }
+    if (!$("dict-review-form").hidden) $("dict-hand-text").focus();
+  });
+
+  $("dict-review-form").addEventListener("submit", (event) => {
+    event.preventDefault();
+    showError("");
+    finish(views.upload, { full_text: $("dict-hand-text").value });
+  });
+
   // Saves the result as a plain text file: both versions of every sentence,
   // the words that differ, and the teacher's feedback.
   $("dict-download").addEventListener("click", () => {
@@ -255,6 +312,7 @@
       `Date: ${stamp.day} ${stamp.time}`,
       `Accuracy: ${result.accuracy}% (${result.correct} of ${result.total} correct)`,
       "Punctuation and capital letters were not marked.",
+      ...(finished.handwriting ? ["Written by hand and read from a photo."] : []),
       "",
       "===== FEEDBACK =====",
       "",
@@ -269,7 +327,7 @@
         "",
         `Sentence ${row.number} (${row.correct} of ${row.total} correct)`,
         `Correct:   ${row.original}`,
-        `You typed: ${row.typed.length ? row.typed.map((token) => token.text).join(row.joiner) : "(nothing typed)"}`
+        `${finished.handwriting ? "You wrote:" : "You typed:"} ${row.typed.length ? row.typed.map((token) => token.text).join(row.joiner) : "(nothing written)"}`
       );
       if (missed.length) lines.push(`Missed or wrong: ${missed.join(row.joiner ? ", " : " ")}`);
       if (extra.length) lines.push(`Not matching in your text: ${extra.join(row.joiner ? ", " : " ")}`);

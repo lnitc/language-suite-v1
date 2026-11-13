@@ -9,8 +9,7 @@ computer with free local models, or with a cloud AI service if you prefer.
 | Job interview rehearsal (voice) | Ready |
 | Interpreter simulation (voice) | Ready |
 | Vocabulary practice (text or voice) | Ready |
-| Dictation (typed) | Ready |
-| Dictation (handwritten, photo upload) | Planned |
+| Dictation (typed, or handwritten with a photo upload) | Ready |
 
 ## How it works
 
@@ -154,6 +153,22 @@ Files are read in memory on your computer and are not saved. Only the first
 8,000 characters of a document are given to the model; the app tells you
 when a file was cut.
 
+## Handwritten dictation
+
+In Dictation, choose **How you write: By hand**. You listen to each sentence
+and write on paper. At the end you upload a photo or scan of the page (PNG,
+JPEG or WebP, up to four pages).
+
+1. The chat model reads your handwriting. It is not shown the original
+   text, so it cannot quietly repair your mistakes.
+2. You see what it read and can correct misreadings before marking.
+3. The text is marked like a typed dictation.
+
+This needs a chat model that can read images (for example `gemma4:e4b` with
+Ollama). Photos are shrunk in the browser before they are sent and are not
+saved. For the best reading, use dark ink, clear spacing between lines, and
+a straight, well-lit photo.
+
 ## Voices (text to speech)
 
 Dictation reads each sentence aloud. There are two ways to get a voice, set
@@ -260,6 +275,8 @@ feedback is about words, grammar and content.
 | "The microphone is blocked or missing" | Click the padlock or microphone icon in the address bar and allow the microphone. Check Windows Settings > Privacy & security > Microphone |
 | "No words were recognised" | Speak closer to the microphone, or check that Windows uses the right input device |
 | The partner's voice is silent | Check the PC volume, pick another voice in the Voice list, or try Edge |
+| "Reading handwriting needs a chat model that can read images" | Use a chat model with image support, or type the dictation instead |
+| The handwriting is read badly | Retake the photo: straight, sharp, good light. Then correct the remaining misreadings in the review box |
 | Dictation is silent | Check the PC volume, pick another voice in the Voice list, or try Edge |
 
 ## For developers

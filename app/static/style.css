@@ -107,3 +107,4 @@ button[type="submit"]:disabled::before {
 @media (prefers-reduced-motion: reduce) {
   .spinner, button[type="submit"]:disabled::before { animation-duration: 3s; }
 }
+#dict-review-form { margin-top: 1.5rem; }

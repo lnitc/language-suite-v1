@@ -18,7 +18,7 @@ from pydantic import BaseModel, Field, StringConstraints
 
 from ..providers.base import ChatProvider, ProviderError, TextToSpeech
 from ..providers.factory import get_chat_provider, get_speech_provider
-from ..textutils import compare, parse_json
+from ..textutils import compare, parse_json, split_by_sentence
 from .speech import clean_language_code
 
 router = APIRouter(prefix="/api/dictation", tags=["dictation"])
@@ -63,7 +63,19 @@ class StartRequest(BaseModel):
 
 
 class SubmitRequest(BaseModel):
-    answers: list[Annotated[str, StringConstraints(max_length=2000)]] = Field(max_length=50)
+    # Typed dictation: one answer per sentence.
+    answers: list[Annotated[str, StringConstraints(max_length=2000)]] = Field(
+        default_factory=list, max_length=50
+    )
+    # Handwritten dictation: the whole text as read from the photo.
+    full_text: str | None = Field(default=None, max_length=20000)
+
+
+class HandwritingRequest(BaseModel):
+    # Photos of the handwritten page(s), as data URLs.
+    images: list[Annotated[str, StringConstraints(max_length=8_000_000)]] = Field(
+        min_length=1, max_length=4
+    )
 
 
 def _get_session(session_id: str) -> Session:
@@ -209,6 +221,53 @@ async def sentence_audio(
     )
 
 
+@router.post("/sessions/{session_id}/handwriting")
+async def read_handwriting(
+    session_id: str,
+    req: HandwritingRequest,
+    chat: ChatProvider = Depends(get_chat_provider),
+) -> dict:
+    """Reads the learner's handwriting from photos. Returns the text for the
+    learner to check before it is marked.
+
+    The model is not told the original text, so it cannot "see" what the
+    learner was supposed to write and quietly repair mistakes.
+    """
+    session = _get_session(session_id)
+    if any(not image.startswith("data:image/") for image in req.images):
+        raise HTTPException(422, "An uploaded file is not an image.")
+    instruction = (
+        f"The image{'s show' if len(req.images) > 1 else ' shows'} a learner's handwritten "
+        f"dictation in {session.language}. Transcribe the handwriting exactly as written. "
+        "Keep every spelling and grammar mistake: do not correct, complete or improve "
+        "anything, because the mistakes are what will be marked. Leave out words the "
+        "writer crossed out. If a word cannot be read, write [?] in its place. "
+        "Several images are consecutive pages, in order. Reply with the transcription "
+        "only: no comments, no quotation marks, no translation."
+    )
+    messages = [
+        {"role": "system", "content": "You transcribe handwriting precisely and literally."},
+        {
+            "role": "user",
+            "content": [{"type": "text", "text": instruction}]
+            + [{"type": "image_url", "image_url": {"url": image}} for image in req.images],
+        },
+    ]
+    try:
+        raw = await chat.chat(messages, temperature=0.0)
+    except ProviderError as error:
+        raise ProviderError(
+            f"{error} Reading handwriting needs a chat model that can read images."
+        ) from error
+    text = raw.replace("```", "").strip().strip('"').strip()
+    if not text:
+        raise ProviderError(
+            "The model returned no text for this photo. Try a sharper, well-lit photo, "
+            "and check that your chat model can read images."
+        )
+    return {"text": text[:20000]}
+
+
 @router.post("/sessions/{session_id}/submit")
 async def submit(
     session_id: str,
@@ -219,7 +278,10 @@ async def submit(
     if session.result is not None:
         return session.result
 
-    answers = (req.answers + [""] * len(session.sentences))[: len(session.sentences)]
+    if req.full_text is not None:
+        answers = split_by_sentence(session.sentences, req.full_text)
+    else:
+        answers = (req.answers + [""] * len(session.sentences))[: len(session.sentences)]
     rows = []
     for number, (original, typed) in enumerate(zip(session.sentences, answers), start=1):
         typed = " ".join(typed.split())

@@ -106,6 +106,26 @@ function dateStamp(date) {
   };
 }
 
+// Shrinks a photo in the browser before upload: phone photos are far larger
+// than a model needs, and a smaller image is read faster. Returns a JPEG data URL.
+async function photoToDataUrl(file, longestSide = 1600) {
+  let bitmap;
+  try {
+    bitmap = await createImageBitmap(file);
+  } catch {
+    throw new Error(`"${file.name}" could not be opened as an image. Use a PNG, JPEG or WebP file.`);
+  }
+  const scale = Math.min(1, longestSide / Math.max(bitmap.width, bitmap.height));
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.round(bitmap.width * scale);
+  canvas.height = Math.round(bitmap.height * scale);
+  const context = canvas.getContext("2d");
+  context.fillStyle = "#fff"; // transparent PNGs get a white page
+  context.fillRect(0, 0, canvas.width, canvas.height);
+  context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+  return canvas.toDataURL("image/jpeg", 0.85);
+}
+
 // Covers a section with a spinner and a message while the app waits for the
 // model, and locks its buttons and fields. Call with no message to remove it.
 function setBusy(section, message) {
