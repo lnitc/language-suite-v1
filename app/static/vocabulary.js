@@ -18,6 +18,10 @@
   let languages = { source: "", target: "" };
   let codes = { source: "", target: "" };
   let voiceMode = false;
+  let sending = false;
+  let awaitingResult = false;
+  let finished = null; // the last result, for the download
+  const answerButtons = [$("answer-form").querySelector("button[type=submit]"), $("skip-button")];
 
   // Voice mode: the word is also spoken, and the answer can be said aloud.
   const mic = voice.attachMic($("vocab-mic"), {
@@ -50,10 +54,17 @@
       showWord(progress);
       return;
     }
-    $("progress").textContent = "Checking your answers…";
-    const result = await api(`/api/vocabulary/sessions/${sessionId}/result`);
-    renderResults(result);
-    show("results");
+    awaitingResult = true; // all words are answered; only the result is missing
+    setBusy(views.practice, "Checking your answers…");
+    try {
+      const result = await api(`/api/vocabulary/sessions/${sessionId}/result`);
+      awaitingResult = false;
+      finished = { result, date: new Date(), voiceMode };
+      renderResults(result);
+      show("results");
+    } finally {
+      setBusy(views.practice, null);
+    }
   }
 
   function renderResults(result) {
@@ -104,6 +115,7 @@
         }),
       });
       sessionId = progress.session_id;
+      awaitingResult = false;
       codes = { source: progress.source_language_code, target: progress.target_language_code };
       voiceMode = $("mode").value === "voice";
       $("vocab-voice-tools").hidden = !voiceMode;
@@ -121,17 +133,27 @@
   });
 
   async function sendAnswer(skip) {
+    if (sending) return; // a second click must not answer the next word too
+    sending = true;
+    answerButtons.forEach((button) => { button.disabled = true; });
     showError("");
     voice.stop();
     await mic.reset();
     try {
-      const progress = await api(`/api/vocabulary/sessions/${sessionId}/answers`, {
-        method: "POST",
-        body: JSON.stringify({ answer: skip ? "" : $("answer").value, skip }),
-      });
-      await advance(progress);
+      if (awaitingResult) {
+        await advance({ done: true }); // the result failed before: just ask again
+      } else {
+        const progress = await api(`/api/vocabulary/sessions/${sessionId}/answers`, {
+          method: "POST",
+          body: JSON.stringify({ answer: skip ? "" : $("answer").value, skip }),
+        });
+        await advance(progress);
+      }
     } catch (error) {
       showError(error.message);
+    } finally {
+      sending = false;
+      answerButtons.forEach((button) => { button.disabled = false; });
     }
   }
 
@@ -142,6 +164,40 @@
   $("skip-button").addEventListener("click", () => sendAnswer(true));
   $("vocab-hear").addEventListener("click", speakWord);
   document.addEventListener("feature-change", () => { mic.reset(); });
+  // Saves the result as a plain text file: every word with the learner's
+  // translation, the correct translations and the outcome.
+  $("vocab-download").addEventListener("click", () => {
+    if (!finished) return;
+    const { result, date } = finished;
+    const stamp = dateStamp(date);
+    const percent = Math.round((result.score / result.total) * 100);
+    const lines = [
+      "Language Suite: Vocabulary practice",
+      `Languages: ${languages.source} -> ${languages.target}`,
+      `Type of training: ${finished.voiceMode ? "Voice" : "Text"}`,
+      `Date: ${stamp.day} ${stamp.time}`,
+      `Score: ${result.score} / ${result.total} (${percent}%)`,
+      "",
+      "===== WORDS =====",
+    ];
+    result.items.forEach((item, i) => {
+      lines.push(
+        "",
+        `${i + 1}. ${item.word}`,
+        `   Your translation: ${item.your_answer || "-"}`,
+        `   Correct translations: ${item.correct_translations.join(", ")}`,
+        `   Result: ${STATUS_LABELS[item.status] || item.status}`
+      );
+    });
+    const toReview = result.items.filter((item) => item.status === "wrong" || item.status === "skipped");
+    if (toReview.length) {
+      lines.push("", "===== WORDS TO REVIEW =====", "");
+      toReview.forEach((item) => lines.push(`${item.word} = ${item.correct_translations.join(", ")}`));
+    }
+    lines.push("");
+    downloadTextFile("vocabulary", date, lines);
+  });
+
   $("restart-button").addEventListener("click", () => {
     sessionId = null;
     showError("");

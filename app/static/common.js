@@ -106,6 +106,28 @@ function dateStamp(date) {
   };
 }
 
+// Covers a section with a spinner and a message while the app waits for the
+// model, and locks its buttons and fields. Call with no message to remove it.
+function setBusy(section, message) {
+  let overlay = section.querySelector(":scope > .busy");
+  if (!message) {
+    if (overlay) overlay.remove();
+    section.inert = false;
+    return;
+  }
+  if (!overlay) {
+    overlay = document.createElement("div");
+    overlay.className = "busy";
+    overlay.setAttribute("role", "status");
+    const spinner = document.createElement("span");
+    spinner.className = "spinner";
+    overlay.append(spinner, document.createElement("span"));
+    section.appendChild(overlay);
+  }
+  overlay.lastChild.textContent = message;
+  section.inert = true; // no clicks or typing underneath
+}
+
 function showNote(id, message) {
   $(id).textContent = message || "";
   $(id).hidden = !message;

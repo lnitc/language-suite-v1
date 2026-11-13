@@ -10,6 +10,7 @@
   let index = 0;
   let spoken = [];
   let heard = [];
+  let finished = null; // the last result, for the download
 
   function show(name) {
     for (const [key, el] of Object.entries(views)) el.hidden = key !== name;
@@ -132,22 +133,51 @@
       return;
     }
     voice.stop();
-    const button = $("interp-next");
-    button.disabled = true;
-    button.textContent = "Writing your feedback…";
+    setBusy(views.live, "Writing your feedback…");
     try {
       const result = await api(`/api/interpreter/sessions/${sessionId}/submit`, {
         method: "POST",
         body: JSON.stringify({ interpretations: spoken }),
       });
+      finished = { result, date: new Date() };
       renderResults(result);
       show("results");
     } catch (error) {
       showError(error.message);
-      button.textContent = "Finish and get feedback";
     } finally {
-      button.disabled = false;
+      setBusy(views.live, null);
     }
+  });
+
+  // Saves the result as a plain text file: for every part the original, the
+  // learner's interpretation, the ideal version and the comment.
+  $("interp-download").addEventListener("click", () => {
+    if (!finished) return;
+    const { result, date } = finished;
+    const stamp = dateStamp(date);
+    const lines = [
+      "Language Suite: Interpreter simulation",
+      `Languages: ${result.source_language} -> ${result.target_language}`,
+      `Date: ${stamp.day} ${stamp.time}`,
+      "",
+      "===== FEEDBACK =====",
+      "",
+      result.overall || "(No overall comment was returned.)",
+      "",
+      "===== PART BY PART =====",
+    ];
+    for (const row of result.batches) {
+      lines.push(
+        "",
+        `Part ${row.number}`,
+        `Original (${result.source_language}): ${row.original}`,
+        `You said: ${row.interpretation || "(nothing said)"}`,
+        `Ideal version: ${row.ideal || "-"}`,
+        `Comment: ${row.comment || "-"}`
+      );
+    }
+    lines.push("");
+    downloadTextFile("interpreter", date, lines);
   });
 
   $("interp-restart").addEventListener("click", () => {

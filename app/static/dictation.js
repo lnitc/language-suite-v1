@@ -117,9 +117,7 @@
   }
 
   async function finish() {
-    const button = $("dict-next");
-    button.disabled = true;
-    button.textContent = "Checking your dictation…";
+    setBusy(views.practice, "Checking your dictation…");
     try {
       const result = await api(`/api/dictation/sessions/${sessionId}/submit`, {
         method: "POST",
@@ -130,9 +128,8 @@
       show("results");
     } catch (error) {
       showError(error.message);
-      button.textContent = "Finish and check";
     } finally {
-      button.disabled = false;
+      setBusy(views.practice, null);
     }
   }
 

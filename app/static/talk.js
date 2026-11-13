@@ -190,9 +190,7 @@
     voice.stop();
     await mic.reset();
     mic.setEnabled(false);
-    const button = $("talk-end");
-    button.disabled = true;
-    status("Writing your feedback…");
+    setBusy(views.live, "Writing your feedback…");
     try {
       const result = await api(`/api/talk/sessions/${sessionId}/finish`, { method: "POST" });
       finished = {
@@ -218,7 +216,7 @@
       showError(error.message);
       status("The feedback could not be written. Press the button to try again.");
     } finally {
-      button.disabled = false;
+      setBusy(views.live, null);
     }
   });
 

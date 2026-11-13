@@ -83,3 +83,27 @@ button.mic:disabled, .player button:disabled { opacity: 0.5; cursor: not-allowed
 label.inline input[type="checkbox"] { width: auto; }
 
 .note { padding: 0.6rem 0.9rem; border-radius: 8px; border: 1px solid var(--warn); color: var(--warn); font-size: 0.9rem; }
+
+/* ---------- Waiting for the model ---------- */
+section { position: relative; }
+.busy {
+  position: absolute; inset: 0; z-index: 2; border-radius: 12px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.8rem;
+  background: color-mix(in srgb, var(--card) 88%, transparent);
+  font-weight: 600; text-align: center; padding: 1rem;
+}
+.spinner, button[type="submit"]:disabled::before {
+  content: ""; display: inline-block; border-radius: 50%;
+  border: 3px solid var(--line); border-top-color: var(--accent);
+  animation: spin 0.9s linear infinite;
+}
+.spinner { width: 2.4rem; height: 2.4rem; }
+/* Start buttons show a small spinner while a session is being prepared. */
+button[type="submit"]:disabled::before {
+  width: 0.9em; height: 0.9em; margin-right: 0.5em; vertical-align: -0.12em;
+  border-width: 2px; border-color: rgb(255 255 255 / 45%); border-top-color: #fff;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) {
+  .spinner, button[type="submit"]:disabled::before { animation-duration: 3s; }
+}
