@@ -224,18 +224,14 @@
 
   $("talk-restart").addEventListener("click", leaveSession);
 
-  // Saves the script and the feedback as a plain text file. Built in the
-  // browser from what is already on screen; nothing is sent anywhere.
+  // Saves the script and the feedback as a plain text file.
   $("talk-download").addEventListener("click", () => {
     if (!finished) return;
-    const two = (n) => String(n).padStart(2, "0");
-    const d = finished.date;
-    const day = `${d.getFullYear()}-${two(d.getMonth() + 1)}-${two(d.getDate())}`;
-    const time = `${two(d.getHours())}:${two(d.getMinutes())}`;
-    const lines = [
+    const stamp = dateStamp(finished.date);
+    downloadTextFile(finished.kind, finished.date, [
       `Language Suite: ${finished.title}`,
       `Language: ${finished.language}`,
-      `Date: ${day} ${time}`,
+      `Date: ${stamp.day} ${stamp.time}`,
       "",
       "===== FEEDBACK =====",
       "",
@@ -245,17 +241,7 @@
       "",
       ...finished.transcript.map((row) => `${row.speaker}: ${row.text}`),
       "",
-    ];
-    // Windows line endings, and a UTF-8 marker so Notepad shows every script correctly.
-    const text = "\uFEFF" + lines.join("\n").replace(/\r?\n/g, "\r\n");
-    const url = URL.createObjectURL(new Blob([text], { type: "text/plain;charset=utf-8" }));
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `${finished.kind}-${day}-${time.replace(":", "")}.txt`;
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    ]);
   });
 
   document.addEventListener("feature-change", (event) => {

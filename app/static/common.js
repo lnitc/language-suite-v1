@@ -81,6 +81,31 @@ async function readMaterial(file, { allowImages = false } = {}) {
   return { ...empty, text: text.slice(0, 200000), note };
 }
 
+// Saves lines of text as a .txt file in the Downloads folder. The file is
+// built in the browser from what is on screen; nothing is sent anywhere.
+// Returns nothing; `prefix` and `date` make a name like "dictation-2026-11-13-1013.txt".
+function downloadTextFile(prefix, date, lines) {
+  const stamp = dateStamp(date);
+  // Windows line endings, and a UTF-8 marker so Notepad shows every script correctly.
+  const text = "\uFEFF" + lines.join("\n").replace(/\r?\n/g, "\r\n");
+  const url = URL.createObjectURL(new Blob([text], { type: "text/plain;charset=utf-8" }));
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `${prefix}-${stamp.day}-${stamp.time.replace(":", "")}.txt`;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+function dateStamp(date) {
+  const two = (n) => String(n).padStart(2, "0");
+  return {
+    day: `${date.getFullYear()}-${two(date.getMonth() + 1)}-${two(date.getDate())}`,
+    time: `${two(date.getHours())}:${two(date.getMinutes())}`,
+  };
+}
+
 function showNote(id, message) {
   $(id).textContent = message || "";
   $(id).hidden = !message;

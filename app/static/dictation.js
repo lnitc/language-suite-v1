@@ -16,6 +16,7 @@
   let answers = [];
   let played = [];
   let audioUrls = {};
+  let finished = null; // the last result, for the download
 
   function show(name) {
     for (const [key, el] of Object.entries(views)) el.hidden = key !== name;
@@ -124,6 +125,7 @@
         method: "POST",
         body: JSON.stringify({ answers }),
       });
+      finished = { result, date: new Date() };
       renderResults(result);
       show("results");
     } catch (error) {
@@ -241,6 +243,42 @@
     answers[index] = $("dict-answer").value;
     if (index > 0) index -= 1;
     showSentence(false);
+  });
+
+  // Saves the result as a plain text file: both versions of every sentence,
+  // the words that differ, and the teacher's feedback.
+  $("dict-download").addEventListener("click", () => {
+    if (!finished) return;
+    const { result, date } = finished;
+    const stamp = dateStamp(date);
+    const differing = (tokens) => tokens.filter((token) => !token.ok).map((token) => token.text);
+    const lines = [
+      "Language Suite: Dictation",
+      `Language: ${result.language}`,
+      `Date: ${stamp.day} ${stamp.time}`,
+      `Accuracy: ${result.accuracy}% (${result.correct} of ${result.total} correct)`,
+      "Punctuation and capital letters were not marked.",
+      "",
+      "===== FEEDBACK =====",
+      "",
+      result.feedback || "(No teacher's comment was generated.)",
+      "",
+      "===== SENTENCE BY SENTENCE =====",
+    ];
+    for (const row of result.sentences) {
+      const missed = differing(row.expected);
+      const extra = differing(row.typed);
+      lines.push(
+        "",
+        `Sentence ${row.number} (${row.correct} of ${row.total} correct)`,
+        `Correct:   ${row.original}`,
+        `You typed: ${row.typed.length ? row.typed.map((token) => token.text).join(row.joiner) : "(nothing typed)"}`
+      );
+      if (missed.length) lines.push(`Missed or wrong: ${missed.join(row.joiner ? ", " : " ")}`);
+      if (extra.length) lines.push(`Not matching in your text: ${extra.join(row.joiner ? ", " : " ")}`);
+    }
+    lines.push("");
+    downloadTextFile("dictation", date, lines);
   });
 
   $("dict-restart").addEventListener("click", () => {

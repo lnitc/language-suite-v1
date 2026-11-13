@@ -70,7 +70,6 @@ label.inline select { width: auto; max-width: 16rem; }
 .sentence p { margin: 0.2rem 0; }
 .miss { background: color-mix(in srgb, var(--warn) 25%, transparent); border-bottom: 2px solid var(--warn); border-radius: 3px; }
 .extra { color: var(--bad); text-decoration: line-through; }
-#dict-restart { margin-top: 1rem; }
 
 /* ---------- Voice features ---------- */
 .status { font-weight: 600; min-height: 1.5em; }
