@@ -137,6 +137,23 @@ python -m uvicorn app.main:app --port 8000
 Open <http://localhost:8000> in your browser. Press `Ctrl+C` in PowerShell to
 stop the app. It only listens on your own computer, not on the network.
 
+## Uploading material
+
+The conversation, job interview and vocabulary features accept a file, for
+example a CV, a job description, an article or a word list.
+
+| File type | Supported | Notes |
+|---|---|---|
+| Text (`.txt`, `.md`, `.csv`) | Yes | |
+| PDF | Yes | Must contain selectable text. A scanned PDF has none: upload a photo of the page as an image instead |
+| Word `.docx` | Yes | Text and tables are read; pictures, headers and footers are not |
+| Word `.doc` (old format) | No | Open it in Word and use Save As to make a `.docx` or PDF |
+| Image (`.png`, `.jpg`, `.webp`) | Conversation and interview only | Needs a chat model that can read images |
+
+Files are read in memory on your computer and are not saved. Only the first
+8,000 characters of a document are given to the model; the app tells you
+when a file was cut.
+
 ## Voices (text to speech)
 
 Dictation reads each sentence aloud. There are two ways to get a voice, set
@@ -264,6 +281,7 @@ app/
     vocabulary.py    Feature 4
     dictation.py     Feature 5
     speech.py        shared speech endpoints (transcribe, synthesize)
+    materials.py     reads text from uploaded PDF and Word files
   textutils.py       shared text helpers (answer matching, dictation marking)
   static/            browser UI (plain HTML, CSS, JavaScript)
 tests/               run without any model, using a fake provider

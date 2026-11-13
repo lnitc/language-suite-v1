@@ -31,13 +31,59 @@ async function api(path, options) {
   return (await request(path, options)).json();
 }
 
-function readFileAsText(file) {
+function readFile(file, how) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => resolve(String(reader.result));
     reader.onerror = () => reject(new Error("Could not read the uploaded file."));
-    reader.readAsText(file);
+    reader[how](file);
   });
+}
+
+// How much of a document the model is given. Longer material is cut off.
+const MATERIAL_LIMIT = 8000;
+
+// Turns an uploaded file into material for a session.
+// Returns { text, image, note }: text for documents, a data URL for images,
+// and a note to show the learner (for example when a long file was cut).
+async function readMaterial(file, { allowImages = false } = {}) {
+  const empty = { text: "", image: "", note: "" };
+  if (!file) return empty;
+  if (file.size > 20 * 1024 * 1024) {
+    throw new Error("The file is larger than 20 MB. Please use a smaller one.");
+  }
+  const name = file.name.toLowerCase();
+
+  if (file.type.startsWith("image/")) {
+    if (!allowImages) throw new Error("Images cannot be used here. Use a text, PDF or Word file.");
+    if (file.size > 5 * 1024 * 1024) {
+      throw new Error("The image is larger than 5 MB. Please use a smaller one.");
+    }
+    return { ...empty, image: await readFile(file, "readAsDataURL") };
+  }
+
+  let text;
+  if (/\.(pdf|docx|doc)$/.test(name) || file.type === "application/pdf") {
+    // PDF and Word files are unpacked by the app server (on this computer).
+    const response = await request(
+      `/api/materials/extract?filename=${encodeURIComponent(file.name)}`,
+      { method: "POST", headers: { "Content-Type": "application/octet-stream" }, body: file }
+    );
+    text = (await response.json()).text;
+  } else {
+    text = await readFile(file, "readAsText");
+  }
+
+  const note = text.length > MATERIAL_LIMIT
+    ? `"${file.name}" is long (${text.length.toLocaleString()} characters): only the first ` +
+      `${MATERIAL_LIMIT.toLocaleString()} are used. Put the most important part at the top, or upload a shorter file.`
+    : "";
+  return { ...empty, text: text.slice(0, 200000), note };
+}
+
+function showNote(id, message) {
+  $(id).textContent = message || "";
+  $(id).hidden = !message;
 }
 
 // Feature tabs

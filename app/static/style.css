@@ -82,3 +82,5 @@ button.mic:disabled, .player button:disabled { opacity: 0.5; cursor: not-allowed
 #talk-end, #interp-next { margin-top: 1rem; }
 .ideal { color: var(--good); }
 label.inline input[type="checkbox"] { width: auto; }
+
+.note { padding: 0.6rem 0.9rem; border-radius: 8px; border: 1px solid var(--warn); color: var(--warn); font-size: 0.9rem; }

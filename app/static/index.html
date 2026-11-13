@@ -56,14 +56,15 @@
             <textarea id="session-prompt" rows="2" maxlength="2000"
               placeholder="e.g. Intermediate business vocabulary about meetings"></textarea>
           </label>
-          <label>Word list file <span class="muted">(optional: .txt or .csv with words to practice)</span>
-            <input id="material" type="file" accept=".txt,.csv,.tsv,.md,text/plain">
+          <label>Word list file <span class="muted">(optional: words to practice, as text, .csv, PDF or Word (.docx))</span>
+            <input id="material" type="file" accept=".txt,.csv,.tsv,.md,.pdf,.docx,.doc,text/plain,application/pdf">
           </label>
           <button id="start-button" type="submit" class="primary">Start session</button>
         </form>
       </section>
 
       <section id="vocab-practice" hidden>
+        <p id="vocab-note" class="note" hidden></p>
         <p id="progress" class="muted"></p>
         <p id="direction" class="muted"></p>
         <p id="word" class="word"></p>
@@ -115,14 +116,16 @@
           <label>Session prompt <span class="muted">(optional: topic, focus)</span>
             <textarea id="talk-session-prompt" rows="2" maxlength="2000"></textarea>
           </label>
-          <label>Material <span class="muted">(optional: a text file or an image, up to 5 MB)</span>
-            <input id="talk-material" type="file" accept=".txt,.md,.csv,text/plain,image/png,image/jpeg,image/webp">
+          <label>Material <span class="muted" id="talk-material-hint"></span>
+            <input id="talk-material" type="file"
+              accept=".txt,.md,.csv,.pdf,.docx,.doc,text/plain,application/pdf,image/png,image/jpeg,image/webp">
           </label>
           <button id="talk-start" type="submit" class="primary">Start session</button>
         </form>
       </section>
 
       <section id="talk-live" hidden>
+        <p id="talk-note" class="note" hidden></p>
         <p id="talk-status" class="status" aria-live="polite"></p>
         <div class="player">
           <button type="button" id="talk-mic" class="mic"></button>

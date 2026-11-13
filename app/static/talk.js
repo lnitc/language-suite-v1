@@ -16,6 +16,7 @@
       preset: "intermediate",
       systemHint: "You are a friendly, patient language teacher.",
       sessionHint: "e.g. Let's talk about fashion trends",
+      materialHint: "(optional: an article or notes to talk about, as text, PDF, Word (.docx) or image)",
     },
     interview: {
       title: "Job interview rehearsal",
@@ -28,6 +29,7 @@
       preset: "medium",
       systemHint: "You are an experienced job interviewer.",
       sessionHint: "e.g. Ask me questions only about ABC company; the role is marketing manager",
+      materialHint: "(optional: your CV or the job description, as PDF, Word (.docx), text or image)",
     },
   };
 
@@ -59,6 +61,7 @@
     select.value = config.preset;
     $("talk-system-prompt").placeholder = config.systemHint;
     $("talk-session-prompt").placeholder = config.sessionHint;
+    $("talk-material-hint").textContent = config.materialHint;
     $("talk-questions-label").hidden = kind !== "interview";
     leaveSession();
   }
@@ -129,15 +132,6 @@
     },
   });
 
-  function readFile(file, how) {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(String(reader.result));
-      reader.onerror = () => reject(new Error("Could not read the uploaded file."));
-      reader[how](file);
-    });
-  }
-
   $("talk-setup-form").addEventListener("submit", async (event) => {
     event.preventDefault();
     showError("");
@@ -145,15 +139,10 @@
     button.disabled = true;
     button.textContent = "Getting ready…";
     try {
-      let material = "";
-      let image = "";
-      const file = $("talk-material").files[0];
-      if (file && file.type.startsWith("image/")) {
-        if (file.size > 5 * 1024 * 1024) throw new Error("The image is larger than 5 MB. Please use a smaller one.");
-        image = await readFile(file, "readAsDataURL");
-      } else if (file) {
-        material = (await readFile(file, "readAsText")).slice(0, 200000);
-      }
+      const { text: material, image, note } = await readMaterial(
+        $("talk-material").files[0], { allowImages: true }
+      );
+      showNote("talk-note", note);
       const started = await api("/api/talk/sessions", {
         method: "POST",
         body: JSON.stringify({

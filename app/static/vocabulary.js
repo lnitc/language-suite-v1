@@ -86,8 +86,8 @@
     button.disabled = true;
     button.textContent = "Preparing words…";
     try {
-      const file = $("material").files[0];
-      const material = file ? await readFileAsText(file) : "";
+      const { text: material, note } = await readMaterial($("material").files[0]);
+      showNote("vocab-note", note);
       languages = {
         source: $("source-language").value.trim(),
         target: $("target-language").value.trim(),
@@ -100,7 +100,7 @@
           count: Number($("count").value),
           system_prompt: $("system-prompt").value,
           session_prompt: $("session-prompt").value,
-          material: material.slice(0, 200000),
+          material,
         }),
       });
       sessionId = progress.session_id;
