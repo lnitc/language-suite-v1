@@ -116,3 +116,19 @@ progress { width: 100%; height: 0.7rem; accent-color: var(--accent); }
 #wl-table td { overflow-wrap: anywhere; }
 #wl-table tr.incomplete td { color: var(--warn); }
 button:disabled { cursor: not-allowed; }
+
+/* ---------- Printing a word list (also used for "Save as PDF") ---------- */
+#print-area { display: none; }
+@media print {
+  @page { size: A4 landscape; margin: 12mm; }
+  body { max-width: none; padding: 0; background: #fff; color: #000; }
+  body > *:not(#print-area) { display: none !important; }
+  #print-area { display: block; font-size: 10pt; }
+  #print-area h1 { font-size: 15pt; margin: 0 0 2mm; }
+  #print-area p { margin: 0 0 4mm; color: #444; }
+  #print-area table { width: 100%; border-collapse: collapse; margin: 0; font-size: 10pt; }
+  #print-area th, #print-area td { border: 0.3mm solid #888; padding: 1.5mm 2mm; color: #000; overflow-wrap: anywhere; }
+  #print-area th { background: #eee; }
+  #print-area thead { display: table-header-group; } /* repeat the header on every page */
+  #print-area tr { break-inside: avoid; }
+}

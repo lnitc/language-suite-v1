@@ -142,3 +142,35 @@ def test_validation(client):
     assert client.post("/api/wordlist/sessions/nope/batches/0").status_code == 404
     use(EchoChat(words=[]))
     assert start(client).status_code == 502
+
+
+# ---------- Word export ----------
+
+def test_docx_export_contains_the_table(client):
+    docx = pytest.importorskip("docx")
+    import io
+
+    body = {
+        "title": "Vocabulary list: Japanese",
+        "subtitle": "Japanese with explanations in English",
+        "header": ["#", "Word", "Pronunciation", "Translation", "Example and notes"],
+        "rows": [
+            ["1", "精進", "しょうじん", "devotion, diligence", "彼は精進を重ねた。 — He kept working at it."],
+            ["2", "錦", "にしき", "brocade", "bad\x0bchar | =formal"],
+            ["3", "short row"],
+        ],
+    }
+    response = client.post("/api/wordlist/export/docx", json=body)
+    assert response.status_code == 200
+    assert response.headers["content-type"].startswith("application/vnd.openxmlformats")
+    document = docx.Document(io.BytesIO(response.content))
+    table = document.tables[0]
+    assert [cell.text for cell in table.rows[0].cells] == body["header"]
+    assert [cell.text for cell in table.rows[1].cells] == body["rows"][0]
+    assert table.rows[2].cells[4].text == "badchar | =formal"  # control character removed
+    assert [cell.text for cell in table.rows[3].cells] == ["3", "short row", "", "", ""]
+    assert document.paragraphs[0].text == "Vocabulary list: Japanese"
+    section = document.sections[0]
+    assert section.page_width > section.page_height  # landscape
+
+    assert client.post("/api/wordlist/export/docx", json={**body, "rows": []}).status_code == 422

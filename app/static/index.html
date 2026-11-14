@@ -403,11 +403,21 @@
         <p id="wl-status" class="status" aria-live="polite"></p>
         <progress id="wl-progress" value="0" max="1"></progress>
         <div class="player">
-          <button type="button" id="wl-download" class="primary" disabled>⬇ Download CSV</button>
+          <button type="button" id="wl-download" class="primary" disabled>⬇ Download</button>
+          <label class="inline">Format
+            <select id="wl-format">
+              <option value="csv">CSV (Excel, Anki)</option>
+              <option value="txt">Plain text (.txt)</option>
+              <option value="docx">Word (.docx)</option>
+              <option value="pdf">PDF</option>
+              <option value="json">JSON</option>
+            </select>
+          </label>
           <button type="button" id="wl-continue" hidden>Continue</button>
           <button type="button" id="wl-stop">Stop</button>
           <button type="button" id="wl-restart">New list</button>
         </div>
+        <p id="wl-format-note" class="muted" hidden></p>
         <div class="table-scroll">
           <table id="wl-table">
             <thead>
@@ -419,6 +429,9 @@
       </section>
     </div>
   </main>
+
+  <!-- Filled only while a word list is printed or saved as PDF. -->
+  <div id="print-area"></div>
 
   <script src="common.js"></script>
   <script src="voice.js"></script>

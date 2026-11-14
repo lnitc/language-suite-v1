@@ -176,6 +176,17 @@ Two ways to use it:
   back as a complete entry, and "Number of words" is ignored. At most 100
   lines are used; the app warns you when a file is longer.
 
+Choose the file format next to the download button. The choice is
+remembered, and the same list can be downloaded again in another format.
+
+| Format | Good for | Notes |
+|---|---|---|
+| CSV (default) | Excel, Anki and other flashcard tools | The four columns above |
+| Plain text | Reading, printing, pasting into notes | One numbered block per word |
+| Word (.docx) | Editing and printing | A table on a landscape page |
+| PDF | Sharing and printing | Opens the browser's print window: choose "Save as PDF" (or "Microsoft Print to PDF") as the printer. This way every script is drawn correctly with the fonts on your computer |
+| JSON | Other programs | The example, its translation and the remarks are separate fields |
+
 The list is made ten entries at a time, so you can watch it grow, stop and
 continue, and download what is ready. With a local model, 100 entries can
 take several minutes.

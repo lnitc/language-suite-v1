@@ -12,6 +12,13 @@
   let running = false;
   let stopRequested = false;
   let createdAt = null;
+  let languages = { source: "", target: "" };
+
+  const FORMATS = { csv: "CSV", txt: "text", docx: "Word", pdf: "PDF", json: "JSON" };
+  try { // the format chosen last time is offered again
+    const saved = localStorage.getItem("wordlist-format");
+    if (saved in FORMATS) $("wl-format").value = saved;
+  } catch { /* remembering the format is optional */ }
 
   function show(name) {
     for (const [key, el] of Object.entries(views)) el.hidden = key !== name;
@@ -47,9 +54,10 @@
   function setButtons() {
     const finished = nextBatch >= plan.batch_count;
     $("wl-download").disabled = running || rows.length === 0;
+    const format = FORMATS[$("wl-format").value];
     $("wl-download").textContent = finished || rows.length === 0
-      ? "⬇ Download CSV"
-      : `⬇ Download the first ${rows.length} as CSV`;
+      ? `⬇ Download as ${format}`
+      : `⬇ Download the first ${rows.length} as ${format}`;
     $("wl-continue").hidden = running || finished;
     $("wl-stop").hidden = !running;
     $("wl-restart").disabled = running;
@@ -131,6 +139,7 @@
       rows = [];
       nextBatch = 0;
       createdAt = new Date();
+      languages = { source: $("wl-source").value.trim(), target: $("wl-target").value.trim() };
       $("wl-rows").replaceChildren();
       $("wl-progress").max = plan.total;
       $("wl-progress").value = 0;
@@ -161,10 +170,127 @@
     $("wl-stop").hidden = true;
   });
 
-  $("wl-download").addEventListener("click", () => {
-    if (!rows.length) return;
+  // ---------- downloads: the same list in any format, as often as wanted ----------
+
+  const title = () => `Vocabulary list: ${languages.source}`;
+  const subtitle = () => {
+    const stamp = dateStamp(createdAt);
+    return `${languages.source} with explanations in ${languages.target} · ${rows.length} entries · ${stamp.day}`;
+  };
+
+  function downloadCsv() {
     const lines = [HEADER, ...rows.map(columns)].map((cells) => cells.map(csvField).join(","));
     downloadTextFile("wordlist", createdAt, lines, "csv", "text/csv");
+  }
+
+  function downloadText() {
+    const lines = [title(), subtitle(), ""];
+    rows.forEach((row, i) => {
+      lines.push(`${i + 1}. ${row.word}${row.pronunciation ? `  [${row.pronunciation}]` : ""}`);
+      if (row.translation) lines.push(`   ${row.translation}`);
+      if (row.example) lines.push(`   Example: ${row.example}`);
+      if (row.example_translation) lines.push(`            ${row.example_translation}`);
+      if (row.remarks) lines.push(`   Note: ${row.remarks}`);
+      lines.push("");
+    });
+    downloadTextFile("wordlist", createdAt, lines);
+  }
+
+  // JSON keeps the example, its translation and the remarks as separate fields.
+  function downloadJson() {
+    const data = {
+      source_language: languages.source,
+      target_language: languages.target,
+      created: createdAt.toISOString(),
+      entries: rows.map((row) => ({
+        word: row.word,
+        pronunciation: row.pronunciation,
+        translation: row.translation,
+        example: row.example,
+        example_translation: row.example_translation,
+        remarks: row.remarks,
+      })),
+    };
+    // No UTF-8 marker: many JSON readers reject it.
+    downloadTextFile("wordlist", createdAt, [JSON.stringify(data, null, 2)], "json", "application/json", false);
+  }
+
+  // A Word file is a zipped package, so the app server builds it from the rows.
+  async function downloadDocx() {
+    const response = await request("/api/wordlist/export/docx", {
+      method: "POST",
+      body: JSON.stringify({
+        title: title(),
+        subtitle: subtitle(),
+        header: ["#", ...HEADER],
+        rows: rows.map((row, i) => [String(i + 1), ...columns(row)]),
+      }),
+    });
+    downloadBlob(await response.blob(), fileName("wordlist", createdAt, "docx"));
+  }
+
+  // PDF: the browser's own "Save as PDF" is used, because it can draw every
+  // script (kana, kanji, Cyrillic, Arabic, phonetic symbols) with the fonts
+  // already on the computer. A PDF built by the app would need its own fonts.
+  function printAsPdf() {
+    const area = $("print-area");
+    area.replaceChildren();
+    const heading = document.createElement("h1");
+    heading.textContent = title();
+    const info = document.createElement("p");
+    info.textContent = subtitle();
+    const table = document.createElement("table");
+    const head = table.createTHead().insertRow();
+    for (const text of ["#", ...HEADER]) {
+      const th = document.createElement("th");
+      th.textContent = text;
+      head.appendChild(th);
+    }
+    const body = table.createTBody();
+    rows.forEach((row, i) => {
+      const tr = body.insertRow();
+      for (const text of [String(i + 1), ...columns(row)]) tr.insertCell().textContent = text;
+    });
+    area.append(heading, info, table);
+
+    // The page title becomes the suggested file name in the Save dialog.
+    const pageTitle = document.title;
+    document.title = fileName("wordlist", createdAt, "");
+    window.addEventListener("afterprint", () => {
+      document.title = pageTitle;
+      area.replaceChildren();
+    }, { once: true });
+    window.print();
+  }
+
+  $("wl-format").addEventListener("change", () => {
+    try { localStorage.setItem("wordlist-format", $("wl-format").value); } catch { /* optional */ }
+    showNote(
+      "wl-format-note",
+      $("wl-format").value === "pdf"
+        ? 'PDF opens the print window: choose "Save as PDF" (or "Microsoft Print to PDF") as the printer, then Save.'
+        : ""
+    );
+    if (plan) setButtons();
+  });
+
+  $("wl-download").addEventListener("click", async () => {
+    if (!rows.length) return;
+    showError("");
+    const button = $("wl-download");
+    button.disabled = true;
+    try {
+      const format = $("wl-format").value;
+      if (format === "txt") downloadText();
+      else if (format === "json") downloadJson();
+      else if (format === "docx") await downloadDocx();
+      else if (format === "pdf") printAsPdf();
+      else downloadCsv();
+    } catch (error) {
+      showError(error.message);
+    } finally {
+      button.disabled = false;
+    }
   });
 
   $("wl-restart").addEventListener("click", () => {
@@ -172,4 +298,6 @@
     showError("");
     show("setup");
   });
+
+  $("wl-format").dispatchEvent(new Event("change")); // show the hint for a remembered format
 })();

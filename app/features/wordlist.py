@@ -11,14 +11,18 @@ which also gives a progress bar and lets a failed batch be repeated.
 
 from __future__ import annotations
 
+import asyncio
+import io
 import math
+import re
 import uuid
 from collections import OrderedDict
 from dataclasses import dataclass, field
-from typing import Literal
+from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel, Field
+from fastapi.responses import Response
+from pydantic import BaseModel, Field, StringConstraints
 
 from ..providers.base import ChatProvider, ProviderError
 from ..providers.factory import get_chat_provider
@@ -273,3 +277,80 @@ async def make_batch(
         rows.append(row)
     session.batches[index] = rows
     return {"index": index, "rows": rows}
+
+
+# ---------- Word (.docx) export ----------
+# The other formats (CSV, text, JSON, PDF) are made in the browser. A Word
+# file is a zipped package, so it is built here from the rows the browser sends.
+
+DOCX_TYPE = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+_CONTROL_CHARS = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f]")  # not allowed inside a Word file
+Cell = Annotated[str, StringConstraints(max_length=3000)]
+
+
+class ExportRequest(BaseModel):
+    title: str = Field(default="Vocabulary list", max_length=200)
+    subtitle: str = Field(default="", max_length=300)
+    header: list[Cell] = Field(min_length=1, max_length=8)
+    rows: list[list[Cell]] = Field(min_length=1, max_length=MAX_ENTRIES * 2)
+
+
+def build_docx(req: ExportRequest) -> bytes:
+    try:
+        from docx import Document
+        from docx.enum.section import WD_ORIENT
+        from docx.shared import Mm, Pt
+    except ImportError as exc:
+        raise ProviderError(
+            "Word export is not installed. In your project folder run: "
+            "pip install -r requirements.txt"
+        ) from exc
+
+    def clean(text: str) -> str:
+        return _CONTROL_CHARS.sub("", text)
+
+    document = Document()
+    section = document.sections[0]  # A4, landscape: four columns need the width
+    section.orientation = WD_ORIENT.LANDSCAPE
+    section.page_width, section.page_height = Mm(297), Mm(210)
+    for side in ("left_margin", "right_margin", "top_margin", "bottom_margin"):
+        setattr(section, side, Mm(15))
+
+    document.add_heading(clean(req.title), level=1)
+    if req.subtitle:
+        document.add_paragraph(clean(req.subtitle))
+
+    columns = len(req.header)
+    table = document.add_table(rows=1, cols=columns)
+    table.style = "Table Grid"
+    for cell, text in zip(table.rows[0].cells, req.header):
+        cell.text = ""
+        run = cell.paragraphs[0].add_run(clean(text))
+        run.bold = True
+    for row in req.rows:
+        cells = table.add_row().cells
+        for cell, text in zip(cells, (row + [""] * columns)[:columns]):
+            cell.text = clean(text)
+    # Narrow number column, wide example column (the usable width is 267 mm).
+    widths = [Mm(12), Mm(50), Mm(45), Mm(60), Mm(100)] if columns == 5 else None
+    if widths:
+        table.autofit = False
+        for column, width in zip(table.columns, widths):
+            column.width = width  # Word reads the cell widths, other apps the column widths
+    for row in table.rows:
+        for position, cell in enumerate(row.cells):
+            if widths:
+                cell.width = widths[position]
+            for paragraph in cell.paragraphs:
+                for run in paragraph.runs:
+                    run.font.size = Pt(10)
+
+    buffer = io.BytesIO()
+    document.save(buffer)
+    return buffer.getvalue()
+
+
+@router.post("/export/docx")
+async def export_docx(req: ExportRequest) -> Response:
+    data = await asyncio.to_thread(build_docx, req)
+    return Response(content=data, media_type=DOCX_TYPE, headers={"Cache-Control": "no-store"})

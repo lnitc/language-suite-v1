@@ -84,14 +84,24 @@ async function readMaterial(file, { allowImages = false, warnWhenLong = true } =
 // Saves lines of text as a .txt file in the Downloads folder. The file is
 // built in the browser from what is on screen; nothing is sent anywhere.
 // Returns nothing; `prefix` and `date` make a name like "dictation-2026-11-13-1013.txt".
-function downloadTextFile(prefix, date, lines, extension = "txt", type = "text/plain") {
+function downloadTextFile(prefix, date, lines, extension = "txt", type = "text/plain", marker = true) {
+  // Windows line endings, and (unless switched off) a UTF-8 marker so Notepad
+  // and Excel show every script correctly.
+  const text = (marker ? "\uFEFF" : "") + lines.join("\n").replace(/\r?\n/g, "\r\n");
+  downloadBlob(new Blob([text], { type: `${type};charset=utf-8` }), fileName(prefix, date, extension));
+}
+
+// "wordlist", a date and "csv" -> "wordlist-2026-11-14-0944.csv"
+function fileName(prefix, date, extension) {
   const stamp = dateStamp(date);
-  // Windows line endings, and a UTF-8 marker so Notepad and Excel show every script correctly.
-  const text = "\uFEFF" + lines.join("\n").replace(/\r?\n/g, "\r\n");
-  const url = URL.createObjectURL(new Blob([text], { type: `${type};charset=utf-8` }));
+  return `${prefix}-${stamp.day}-${stamp.time.replace(":", "")}${extension ? `.${extension}` : ""}`;
+}
+
+function downloadBlob(blob, name) {
+  const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;
-  link.download = `${prefix}-${stamp.day}-${stamp.time.replace(":", "")}.${extension}`;
+  link.download = name;
   document.body.appendChild(link);
   link.click();
   link.remove();
