@@ -3,15 +3,14 @@
 An app for practising languages with an AI teacher. It runs on your own
 computer with free local models, or with a cloud AI service if you prefer.
 
-| Feature | Status |
+The features are grouped into four sections:
+
+| Section | Features |
 |---|---|
-| Conversation partner (voice) | Ready |
-| Job interview rehearsal (voice) | Ready |
-| Interpreter simulation (voice) | Ready |
-| Vocabulary practice (text or voice) | Ready |
-| Dictation (typed, or handwritten with a photo upload) | Ready |
-| Essay writing (typed, uploaded or handwritten) | Ready |
-| Vocabulary list creator (CSV download) | Ready |
+| Speaking | Conversation partner, job interview rehearsal, interpreter simulation (all by voice) |
+| Vocabulary | Vocabulary practice (text or voice), vocabulary list creator (CSV and other formats) |
+| Writing | Dictation (typed or handwritten), essay writing (typed, uploaded or handwritten) |
+| Reading | Reading comprehension (a text with multiple-choice questions) |
 
 ## How it works
 
@@ -177,6 +176,26 @@ accepted; check it in two parts.
 The rating is the model's judgement, not an exam score: use it to compare
 your own essays over time rather than as an official grade. Handwriting
 needs a chat model that can read images.
+
+## Reading comprehension
+
+The teacher writes a text and up to ten multiple-choice questions about it,
+each with four options, like the reading part of a language proficiency exam.
+
+1. Choose the language, difficulty, text length and number of questions.
+   "Long" is about one A4 page (around 500 words, or 1,000 characters for
+   languages such as Japanese and Chinese).
+2. The text appears first, so you can start reading while the questions
+   are being prepared.
+3. Choose your answers and submit. You get your score, the correct answers
+   with the reason for each, and, for your wrong answers, why the option
+   you chose is wrong. The result can be downloaded.
+
+The answers are marked by the app itself, not by the model, and the options
+are shuffled. A small local model can still occasionally write a question
+whose "correct" answer is debatable; if a question looks wrong, trust the
+text. Badly formed questions are discarded, so you may sometimes get fewer
+questions than you asked for.
 
 ## Vocabulary list creator
 
@@ -372,6 +391,7 @@ app/
     materials.py     reads text from uploaded PDF and Word files
     wordlist.py      Feature 6 (vocabulary list creator)
     essay.py         Feature 7 (essay writing)
+    reading.py       Feature 8 (reading comprehension)
     handwriting.py   reads handwriting from photos (dictation and essay)
   textutils.py       shared text helpers (answer matching, dictation marking)
   static/            browser UI (plain HTML, CSS, JavaScript)

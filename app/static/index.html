@@ -13,14 +13,22 @@
     <p id="model-info" class="muted"></p>
   </header>
 
-  <nav aria-label="Features">
-    <button class="tab active" data-feature="talk" data-kind="conversation">Conversation</button>
-    <button class="tab" data-feature="talk" data-kind="interview">Job interview</button>
-    <button class="tab" data-feature="interpreter">Interpreter</button>
-    <button class="tab" data-feature="vocabulary">Vocabulary</button>
-    <button class="tab" data-feature="dictation">Dictation</button>
-    <button class="tab" data-feature="essay">Essay</button>
-    <button class="tab" data-feature="wordlist">Word list creator</button>
+  <nav id="section-nav" aria-label="Sections">
+    <button class="section-tab active" data-section="speaking">Speaking</button>
+    <button class="section-tab" data-section="vocabulary">Vocabulary</button>
+    <button class="section-tab" data-section="writing">Writing</button>
+    <button class="section-tab" data-section="reading">Reading</button>
+  </nav>
+  <!-- The features of the chosen section. Hidden when a section has only one. -->
+  <nav id="feature-nav" aria-label="Features">
+    <button class="tab active" data-section="speaking" data-feature="talk" data-kind="conversation">Conversation</button>
+    <button class="tab" data-section="speaking" data-feature="talk" data-kind="interview">Job interview</button>
+    <button class="tab" data-section="speaking" data-feature="interpreter">Interpreter</button>
+    <button class="tab" data-section="vocabulary" data-feature="vocabulary" hidden>Vocabulary practice</button>
+    <button class="tab" data-section="vocabulary" data-feature="wordlist" hidden>Word list creator</button>
+    <button class="tab" data-section="writing" data-feature="dictation" hidden>Dictation</button>
+    <button class="tab" data-section="writing" data-feature="essay" hidden>Essay</button>
+    <button class="tab" data-section="reading" data-feature="reading" hidden>Reading comprehension</button>
   </nav>
 
   <main>
@@ -440,6 +448,87 @@
       </section>
     </div>
 
+    <!-- ================= Reading comprehension ================= -->
+    <div class="feature" id="feature-reading" hidden>
+      <section id="read-setup">
+        <h2>Reading comprehension</h2>
+        <form id="read-setup-form">
+          <div class="row">
+            <label>Language
+              <input id="read-language" required maxlength="60" placeholder="e.g. Japanese">
+            </label>
+            <label>Difficulty
+              <select id="read-difficulty">
+                <option value="beginner">Beginner (A1)</option>
+                <option value="elementary">Elementary (A2)</option>
+                <option value="intermediate" selected>Intermediate (B1)</option>
+                <option value="upper_intermediate">Upper-intermediate (B2)</option>
+                <option value="advanced">Advanced (C1)</option>
+              </select>
+            </label>
+          </div>
+          <div class="row">
+            <label>Text length
+              <select id="read-length">
+                <option value="short">Short (about 150 words / 300 characters)</option>
+                <option value="medium">Medium (about 300 words / 600 characters)</option>
+                <option value="long" selected>Long, about one A4 page (500 words / 1,000 characters)</option>
+              </select>
+            </label>
+            <label>Number of questions <span class="muted">(up to 10)</span>
+              <input id="read-count" type="number" min="1" max="10" value="5" required>
+            </label>
+          </div>
+          <label>System prompt <span class="muted">(optional: who the teacher is, language of the explanations)</span>
+            <textarea id="read-system-prompt" rows="2" maxlength="2000"
+              placeholder="You are an experienced language teacher."></textarea>
+          </label>
+          <label>Session prompt <span class="muted">(optional: topic, kind of text)</span>
+            <textarea id="read-session-prompt" rows="2" maxlength="2000"
+              placeholder="e.g. A newspaper column about working from home"></textarea>
+          </label>
+          <button id="read-start" type="submit" class="primary">Create text and questions</button>
+        </form>
+      </section>
+
+      <section id="read-work" hidden>
+        <article class="reading-text">
+          <h2 id="read-title"></h2>
+          <div id="read-text"></div>
+        </article>
+        <p id="read-wait" class="status"><span class="spinner small"></span>
+          <span>The questions are being prepared. You can start reading.</span></p>
+        <button type="button" id="read-retry" hidden>Try again to make the questions</button>
+        <p id="read-note" class="note" hidden></p>
+        <form id="read-form" hidden>
+          <h3>Questions</h3>
+          <div id="read-questions"></div>
+          <p id="read-unanswered" class="muted"></p>
+          <div class="row">
+            <button type="button" id="read-back">← Back to the settings</button>
+            <button type="submit" class="primary">Check my answers</button>
+          </div>
+        </form>
+      </section>
+
+      <section id="read-results" hidden>
+        <h2>Your result</h2>
+        <p id="read-score" class="score"></p>
+        <details>
+          <summary>Show the text again</summary>
+          <article class="reading-text">
+            <h3 id="read-result-title"></h3>
+            <div id="read-result-text"></div>
+          </article>
+        </details>
+        <div id="read-answers"></div>
+        <div class="player">
+          <button id="read-restart" class="primary">New text</button>
+          <button type="button" id="read-download">⬇ Download result</button>
+        </div>
+      </section>
+    </div>
+
     <!-- ================= Word list creator ================= -->
     <div class="feature" id="feature-wordlist" hidden>
       <section id="wl-setup">
@@ -535,5 +624,6 @@
   <script src="dictation.js"></script>
   <script src="essay.js"></script>
   <script src="wordlist.js"></script>
+  <script src="reading.js"></script>
 </body>
 </html>

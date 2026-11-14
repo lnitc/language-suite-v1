@@ -163,19 +163,32 @@ function showNote(id, message) {
   $(id).hidden = !message;
 }
 
-// Feature tabs
-document.querySelectorAll(".tab[data-feature]").forEach((tab) => {
-  tab.addEventListener("click", () => {
-    document.querySelectorAll(".tab[data-feature]").forEach((other) => {
-      other.classList.toggle("active", other === tab);
-    });
-    document.querySelectorAll(".feature").forEach((feature) => {
-      feature.hidden = feature.id !== `feature-${tab.dataset.feature}`;
-    });
-    showError("");
-    document.dispatchEvent(new CustomEvent("feature-change", { detail: { ...tab.dataset } }));
+// Navigation: sections (Speaking, Vocabulary, Writing, Reading) on top, and
+// below them the features of the chosen section.
+const sectionTabs = [...document.querySelectorAll(".section-tab")];
+const featureTabs = [...document.querySelectorAll(".tab[data-feature]")];
+const lastOpened = {}; // section -> the feature tab last used there
+
+function openFeature(tab) {
+  featureTabs.forEach((other) => other.classList.toggle("active", other === tab));
+  document.querySelectorAll(".feature").forEach((feature) => {
+    feature.hidden = feature.id !== `feature-${tab.dataset.feature}`;
   });
-});
+  lastOpened[tab.dataset.section] = tab;
+  showError("");
+  document.dispatchEvent(new CustomEvent("feature-change", { detail: { ...tab.dataset } }));
+}
+
+function openSection(name) {
+  sectionTabs.forEach((tab) => tab.classList.toggle("active", tab.dataset.section === name));
+  const mine = featureTabs.filter((tab) => tab.dataset.section === name);
+  featureTabs.forEach((tab) => { tab.hidden = tab.dataset.section !== name; });
+  $("feature-nav").hidden = mine.length < 2; // one feature: no second row needed
+  openFeature(lastOpened[name] || mine[0]);
+}
+
+featureTabs.forEach((tab) => tab.addEventListener("click", () => openFeature(tab)));
+sectionTabs.forEach((tab) => tab.addEventListener("click", () => openSection(tab.dataset.section)));
 
 api("/api/health")
   .then((info) => {

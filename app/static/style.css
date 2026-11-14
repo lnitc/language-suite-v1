@@ -21,6 +21,14 @@ h2 { margin-top: 0; font-size: 1.2rem; }
 header p { margin: 0.2rem 0 1rem; }
 
 nav { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-bottom: 1rem; }
+#section-nav { gap: 0; border-bottom: 2px solid var(--line); margin-bottom: 0.8rem; }
+.section-tab {
+  padding: 0.55rem 1.1rem; margin-bottom: -2px; border: none; border-radius: 0;
+  border-bottom: 3px solid transparent; background: transparent; color: var(--muted);
+  font: inherit; font-size: 1.05rem; font-weight: 600;
+}
+.section-tab:hover { color: var(--text); }
+.section-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
 .tab {
   padding: 0.4rem 0.8rem; border: 1px solid var(--line); border-radius: 999px;
   background: transparent; color: var(--text); font: inherit; font-size: 0.9rem;
@@ -147,3 +155,25 @@ details { margin: 1rem 0; }
 summary { cursor: pointer; font-weight: 600; }
 /* Greyed out because the essay is too long, not because something is loading. */
 #essay-submit:disabled::before { display: none; }
+
+/* ---------- Reading comprehension ---------- */
+.reading-text { padding: 1rem 1.25rem; margin-bottom: 1.25rem; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); line-height: 1.85; font-size: 1.05rem; }
+.reading-text h2, .reading-text h3 { margin: 0 0 0.75rem; font-size: 1.15rem; }
+.reading-text p { margin: 0 0 0.9rem; }
+.reading-text p:last-child { margin-bottom: 0; }
+.spinner.small { width: 1.1rem; height: 1.1rem; border-width: 2px; margin-right: 0.5rem; vertical-align: -0.2rem; }
+fieldset.question { border: 1px solid var(--line); border-radius: 8px; margin: 0 0 0.9rem; padding: 0.7rem 1rem 0.8rem; }
+fieldset.question legend { font-weight: 600; padding: 0 0.4rem; }
+fieldset.question label { display: flex; align-items: flex-start; gap: 0.55rem; font-weight: 400; padding: 0.3rem 0; cursor: pointer; }
+fieldset.question input { width: auto; margin-top: 0.3rem; }
+.answer { padding: 0.8rem 0; border-top: 1px solid var(--line); }
+.answer h3 { margin: 0 0 0.4rem; }
+.answer ul { list-style: none; margin: 0 0 0.5rem; padding: 0; }
+.answer li { padding: 0.15rem 0; }
+.answer li.right { color: var(--good); font-weight: 600; }
+.answer li.chosen-wrong { color: var(--bad); }
+.answer p { margin: 0.3rem 0; }
+.badge { font-size: 0.8rem; font-weight: 600; padding: 0.1rem 0.5rem; border-radius: 999px; border: 1px solid currentColor; margin-left: 0.4rem; vertical-align: 0.1rem; }
+.badge.right { color: var(--good); }
+.badge.wrong { color: var(--bad); }
+.badge.none { color: var(--warn); }
