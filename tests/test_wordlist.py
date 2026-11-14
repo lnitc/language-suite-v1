@@ -174,3 +174,23 @@ def test_docx_export_contains_the_table(client):
     assert section.page_width > section.page_height  # landscape
 
     assert client.post("/api/wordlist/export/docx", json={**body, "rows": []}).status_code == 422
+
+
+def test_examples_and_notes_can_be_left_out(client):
+    fake = EchoChat()
+    use(fake)
+    plan = start(client, material="朝 あさ morning\n夜", include_examples=False).json()
+    assert plan["include_examples"] is False
+    rows = client.post(f"/api/wordlist/sessions/{plan['session_id']}/batches/0").json()["rows"]
+    prompt = fake.calls[0]
+    assert "no example sentences" in prompt
+    assert '"example"' not in prompt and '"remarks"' not in prompt
+    # The fake model adds examples anyway; they are dropped because they were not asked for.
+    assert [(r["word"], r["translation"], r["example"], r["example_translation"], r["remarks"], r["complete"]) for r in rows] == [
+        ("朝", "meaning of 朝", "", "", "", True),
+        ("夜", "meaning of 夜", "", "", "", True),
+    ]
+
+    use(EchoChat())
+    with_examples = start(client, material="朝").json()
+    assert with_examples["include_examples"] is True  # the default

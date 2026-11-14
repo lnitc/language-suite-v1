@@ -386,6 +386,10 @@
             <textarea id="wl-prompt" rows="2" maxlength="2000"
               placeholder="e.g. Words for describing weather and seasons"></textarea>
           </label>
+          <label class="inline"><input type="checkbox" id="wl-examples" checked>
+            Include the "Example and notes" column
+            <span class="muted">(untick for a shorter list, for example to practise with in the Vocabulary tab)</span>
+          </label>
           <label>Your own list <span class="muted">(optional: text file, PDF with selectable text, or Word .docx)</span>
             <input id="wl-file" type="file" accept=".txt,.csv,.tsv,.md,.pdf,.docx,.doc,text/plain,application/pdf">
           </label>
@@ -417,11 +421,14 @@
           <button type="button" id="wl-stop">Stop</button>
           <button type="button" id="wl-restart">New list</button>
         </div>
+        <label class="inline"><input type="checkbox" id="wl-with-examples" checked>
+          <span id="wl-with-examples-text">Include the "Example and notes" column in the download</span>
+        </label>
         <p id="wl-format-note" class="muted" hidden></p>
         <div class="table-scroll">
           <table id="wl-table">
             <thead>
-              <tr><th>#</th><th>Word</th><th>Pronunciation</th><th>Translation</th><th>Example and notes</th></tr>
+              <tr><th>#</th><th>Word</th><th>Pronunciation</th><th>Translation</th><th id="wl-examples-head">Example and notes</th></tr>
             </thead>
             <tbody id="wl-rows"></tbody>
           </table>

@@ -3,7 +3,7 @@
 
 (() => {
   const views = { setup: $("wl-setup"), list: $("wl-list") };
-  const HEADER = ["Word", "Pronunciation", "Translation", "Example and notes"];
+  const ALL_HEADERS = ["Word", "Pronunciation", "Translation", "Example and notes"];
 
   let sessionId = null;
   let plan = null; // { total, batch_size, batch_count }
@@ -32,23 +32,45 @@
     return [example, row.remarks].filter(Boolean).join(" | ");
   }
 
+  // The "Example and notes" column is optional: it can be left out when the
+  // list is created (then it is never made), or just left out of a download.
+  function withExamples() {
+    return Boolean(plan && plan.include_examples) && $("wl-with-examples").checked;
+  }
+
+  function header() {
+    return withExamples() ? ALL_HEADERS : ALL_HEADERS.slice(0, 3);
+  }
+
   function columns(row) {
-    return [row.word, row.pronunciation, row.translation, exampleAndNotes(row)];
+    const cells = [row.word, row.pronunciation, row.translation];
+    if (withExamples()) cells.push(exampleAndNotes(row));
+    return cells;
+  }
+
+  function drawRow(row, number) {
+    const tr = document.createElement("tr");
+    if (!row.complete) tr.className = "incomplete";
+    for (const text of [String(number), ...columns(row)]) {
+      const td = document.createElement("td");
+      td.textContent = text; // textContent: model output is never run as HTML
+      tr.appendChild(td);
+    }
+    $("wl-rows").appendChild(tr);
   }
 
   function addRows(batch) {
-    const body = $("wl-rows");
     for (const row of batch) {
       rows.push(row);
-      const tr = document.createElement("tr");
-      if (!row.complete) tr.className = "incomplete";
-      for (const text of [String(rows.length), ...columns(row)]) {
-        const td = document.createElement("td");
-        td.textContent = text; // textContent: model output is never run as HTML
-        tr.appendChild(td);
-      }
-      body.appendChild(tr);
+      drawRow(row, rows.length);
     }
+  }
+
+  // Shows the table with or without the optional column.
+  function redrawTable() {
+    $("wl-examples-head").hidden = !withExamples();
+    $("wl-rows").replaceChildren();
+    rows.forEach((row, i) => drawRow(row, i + 1));
   }
 
   function setButtons() {
@@ -132,6 +154,7 @@
           count: Number($("wl-count").value) || 20,
           prompt: $("wl-prompt").value,
           material,
+          include_examples: $("wl-examples").checked,
         }),
       });
       sessionId = started.session_id;
@@ -140,7 +163,15 @@
       nextBatch = 0;
       createdAt = new Date();
       languages = { source: $("wl-source").value.trim(), target: $("wl-target").value.trim() };
-      $("wl-rows").replaceChildren();
+      // The download option starts as chosen on the form. If the column was
+      // not made at all, it cannot be switched on afterwards.
+      $("wl-with-examples").checked = plan.include_examples;
+      $("wl-with-examples").disabled = !plan.include_examples;
+      $("wl-with-examples-text").textContent = plan.include_examples
+        ? 'Include the "Example and notes" column in the download'
+        : '"Example and notes" were not made for this list (the option was unticked)';
+      redrawTable();
+      status("");
       $("wl-progress").max = plan.total;
       $("wl-progress").value = 0;
       $("wl-progress").hidden = false;
@@ -179,7 +210,7 @@
   };
 
   function downloadCsv() {
-    const lines = [HEADER, ...rows.map(columns)].map((cells) => cells.map(csvField).join(","));
+    const lines = [header(), ...rows.map(columns)].map((cells) => cells.map(csvField).join(","));
     downloadTextFile("wordlist", createdAt, lines, "csv", "text/csv");
   }
 
@@ -188,9 +219,11 @@
     rows.forEach((row, i) => {
       lines.push(`${i + 1}. ${row.word}${row.pronunciation ? `  [${row.pronunciation}]` : ""}`);
       if (row.translation) lines.push(`   ${row.translation}`);
-      if (row.example) lines.push(`   Example: ${row.example}`);
-      if (row.example_translation) lines.push(`            ${row.example_translation}`);
-      if (row.remarks) lines.push(`   Note: ${row.remarks}`);
+      if (withExamples()) {
+        if (row.example) lines.push(`   Example: ${row.example}`);
+        if (row.example_translation) lines.push(`            ${row.example_translation}`);
+        if (row.remarks) lines.push(`   Note: ${row.remarks}`);
+      }
       lines.push("");
     });
     downloadTextFile("wordlist", createdAt, lines);
@@ -206,9 +239,9 @@
         word: row.word,
         pronunciation: row.pronunciation,
         translation: row.translation,
-        example: row.example,
-        example_translation: row.example_translation,
-        remarks: row.remarks,
+        ...(withExamples()
+          ? { example: row.example, example_translation: row.example_translation, remarks: row.remarks }
+          : {}),
       })),
     };
     // No UTF-8 marker: many JSON readers reject it.
@@ -222,7 +255,7 @@
       body: JSON.stringify({
         title: title(),
         subtitle: subtitle(),
-        header: ["#", ...HEADER],
+        header: ["#", ...header()],
         rows: rows.map((row, i) => [String(i + 1), ...columns(row)]),
       }),
     });
@@ -241,7 +274,7 @@
     info.textContent = subtitle();
     const table = document.createElement("table");
     const head = table.createTHead().insertRow();
-    for (const text of ["#", ...HEADER]) {
+    for (const text of ["#", ...header()]) {
       const th = document.createElement("th");
       th.textContent = text;
       head.appendChild(th);
@@ -262,6 +295,8 @@
     }, { once: true });
     window.print();
   }
+
+  $("wl-with-examples").addEventListener("change", redrawTable);
 
   $("wl-format").addEventListener("change", () => {
     try { localStorage.setItem("wordlist-format", $("wl-format").value); } catch { /* optional */ }

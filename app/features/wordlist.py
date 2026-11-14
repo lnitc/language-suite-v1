@@ -46,6 +46,7 @@ class Session:
     prompt: str
     lines: list[str]  # the words to include, or the learner's raw note lines
     from_file: bool
+    include_examples: bool = True
     batches: dict[int, list[dict]] = field(default_factory=dict)
 
 
@@ -61,6 +62,9 @@ class StartRequest(BaseModel):
     count: int = Field(default=20, ge=1, le=MAX_ENTRIES)
     prompt: str = Field(default="", max_length=2000)
     material: str = Field(default="", max_length=200_000)  # the learner's own list, if any
+    # False: only word, pronunciation and translation are made. Quicker, and a
+    # lighter list to reuse as practice material.
+    include_examples: bool = True
 
 
 def _get_session(session_id: str) -> Session:
@@ -146,6 +150,7 @@ async def start_session(
         prompt=req.prompt.strip(),
         lines=lines,
         from_file=provided > 0,
+        include_examples=req.include_examples,
     )
     while len(_sessions) > MAX_SESSIONS:
         _sessions.popitem(last=False)
@@ -155,6 +160,7 @@ async def start_session(
         "batch_size": BATCH_SIZE,
         "batch_count": math.ceil(len(lines) / BATCH_SIZE),
         "from_file": provided > 0,
+        "include_examples": req.include_examples,
         "provided": provided,  # entries found in the file, before the limit
         "limit": MAX_ENTRIES,
     }
@@ -187,16 +193,25 @@ def _batch_prompt(session: Session, chunk: list[str]) -> str:
         f"learners of {source} normally use: hiragana for Japanese, pinyin with tone "
         "marks for Chinese, romanization for other non-Latin scripts, IPA for "
         "languages written in the Latin alphabet. Never empty.\n"
-        f'- "translation": the meaning in {target}, short; separate several senses with commas.\n'
-        f'- "example": one natural sentence in {source} that uses the word, suited to the level.\n'
-        f'- "example_translation": that sentence in {target}.\n'
-        f'- "remarks": in {target}, and only when useful: register (formal, slang, '
-        "jargon), nuance, a common mistake, a synonym, or a note the learner wrote. "
-        'Otherwise "".'
+        f'- "translation": the meaning in {target}, short; separate several senses with commas.'
+        + (
+            f'\n- "example": one natural sentence in {source} that uses the word, suited to the level.\n'
+            f'- "example_translation": that sentence in {target}.\n'
+            f'- "remarks": in {target}, and only when useful: register (formal, slang, '
+            "jargon), nuance, a common mistake, a synonym, or a note the learner wrote. "
+            'Otherwise "".'
+            if session.include_examples
+            else "\nGive only these three fields: no example sentences and no remarks."
+        )
+    )
+    extra = (
+        ', "example": "...", "example_translation": "...", "remarks": "..."'
+        if session.include_examples
+        else ""
     )
     parts.append(
         'Reply with JSON only: {"entries": [{"n": 1, "word": "...", "pronunciation": "...", '
-        '"translation": "...", "example": "...", "example_translation": "...", "remarks": "..."}]}. '
+        f'"translation": "..."{extra}}}]}}. '
         f"Give exactly one entry for each of the {len(chunk)} lines, with the same number."
     )
     parts.append("Lines:\n" + "\n".join(f"{n}. {line}" for n, line in enumerate(chunk, start=1)))
@@ -269,6 +284,8 @@ async def make_batch(
     for number, line in enumerate(chunk, start=1):
         entry = by_number.get(number, {})
         row = {name: " ".join(str(entry.get(name) or "").split()) for name in FIELDS}
+        if not session.include_examples:  # not asked for: drop anything the model added anyway
+            row.update(example="", example_translation="", remarks="")
         # An entry the model skipped keeps the original line, so nothing is lost.
         row["complete"] = bool(row["word"] and row["translation"])
         if not row["word"]:
@@ -332,7 +349,7 @@ def build_docx(req: ExportRequest) -> bytes:
         for cell, text in zip(cells, (row + [""] * columns)[:columns]):
             cell.text = clean(text)
     # Narrow number column, wide example column (the usable width is 267 mm).
-    widths = [Mm(12), Mm(50), Mm(45), Mm(60), Mm(100)] if columns == 5 else None
+    widths = {5: [Mm(12), Mm(50), Mm(45), Mm(60), Mm(100)], 4: [Mm(12), Mm(80), Mm(75), Mm(100)]}.get(columns)
     if widths:
         table.autofit = False
         for column, width in zip(table.columns, widths):

@@ -164,7 +164,7 @@ be imported into flashcard tools such as Anki.
 | 1 | Word or collocation in the language you are learning |
 | 2 | Pronunciation (hiragana for Japanese, pinyin for Chinese, IPA for Latin-alphabet languages, and so on) |
 | 3 | Translation in the language you chose for explanations |
-| 4 | An example sentence with its translation, then remarks if any (register, nuance, common mistakes) |
+| 4 | Optional: an example sentence with its translation, then remarks if any (register, nuance, common mistakes) |
 
 Two ways to use it:
 
@@ -175,6 +175,11 @@ Two ways to use it:
   readings, meanings and notes may be missing or mixed up. Every line comes
   back as a complete entry, and "Number of words" is ignored. At most 100
   lines are used; the app warns you when a file is longer.
+
+Column 4 can be left out. Untick it on the form and it is never made, which
+is quicker. Or untick it above the finished list and download again without
+it. A three-column list is the better choice when you upload it as a word
+list in the Vocabulary tab: less text for a small model to read.
 
 Choose the file format next to the download button. The choice is
 remembered, and the same list can be downloaded again in another format.
