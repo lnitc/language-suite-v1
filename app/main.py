@@ -13,7 +13,7 @@ from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from .config import get_settings
-from .features import dictation, interpreter, materials, speech, talk, vocabulary
+from .features import dictation, interpreter, materials, speech, talk, vocabulary, wordlist
 from .providers.base import ProviderError
 
 app = FastAPI(title="Language Suite")
@@ -47,6 +47,7 @@ app.include_router(speech.router)
 app.include_router(talk.router)
 app.include_router(interpreter.router)
 app.include_router(materials.router)
+app.include_router(wordlist.router)
 
 # The browser UI. Mounted last so it does not shadow the API routes.
 app.mount(

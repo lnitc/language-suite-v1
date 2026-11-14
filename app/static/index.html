@@ -19,6 +19,7 @@
     <button class="tab" data-feature="interpreter">Interpreter</button>
     <button class="tab" data-feature="vocabulary">Vocabulary</button>
     <button class="tab" data-feature="dictation">Dictation</button>
+    <button class="tab" data-feature="wordlist">Word list creator</button>
   </nav>
 
   <main>
@@ -352,6 +353,71 @@
         </div>
       </section>
     </div>
+    <!-- ================= Word list creator ================= -->
+    <div class="feature" id="feature-wordlist" hidden>
+      <section id="wl-setup">
+        <h2>Vocabulary list creator</h2>
+        <p class="muted">Makes a word list you can download as a CSV file (for Excel, Anki and
+          similar tools), or tidies up and completes a list of your own.</p>
+        <form id="wl-form">
+          <div class="row">
+            <label>Language you are learning
+              <input id="wl-source" required maxlength="60" placeholder="e.g. Japanese">
+            </label>
+            <label>Explanations in
+              <input id="wl-target" required maxlength="60" placeholder="e.g. English">
+            </label>
+          </div>
+          <div class="row">
+            <label>Difficulty
+              <select id="wl-difficulty">
+                <option value="beginner">Beginner (A1)</option>
+                <option value="elementary">Elementary (A2)</option>
+                <option value="intermediate" selected>Intermediate (B1)</option>
+                <option value="upper_intermediate">Upper-intermediate (B2)</option>
+                <option value="advanced">Advanced (C1)</option>
+              </select>
+            </label>
+            <label>Number of words <span class="muted">(up to 100)</span>
+              <input id="wl-count" type="number" min="1" max="100" value="20" required>
+            </label>
+          </div>
+          <label>Prompt <span class="muted">(optional: topic, kind of words, special wishes)</span>
+            <textarea id="wl-prompt" rows="2" maxlength="2000"
+              placeholder="e.g. Words for describing weather and seasons"></textarea>
+          </label>
+          <label>Your own list <span class="muted">(optional: text file, PDF with selectable text, or Word .docx)</span>
+            <input id="wl-file" type="file" accept=".txt,.csv,.tsv,.md,.pdf,.docx,.doc,text/plain,application/pdf">
+          </label>
+          <p class="muted">For your own list: write one word or phrase per line, in any layout; readings,
+            meanings and notes may be missing or mixed up. Up to 100 lines are used. When you upload
+            a list, every word in it is returned and "Number of words" is ignored.</p>
+          <p id="wl-file-note" class="note" hidden></p>
+          <button id="wl-start" type="submit" class="primary">Create list</button>
+        </form>
+      </section>
+
+      <section id="wl-list" hidden>
+        <h2>Your word list</h2>
+        <p id="wl-warning" class="note" hidden></p>
+        <p id="wl-status" class="status" aria-live="polite"></p>
+        <progress id="wl-progress" value="0" max="1"></progress>
+        <div class="player">
+          <button type="button" id="wl-download" class="primary" disabled>⬇ Download CSV</button>
+          <button type="button" id="wl-continue" hidden>Continue</button>
+          <button type="button" id="wl-stop">Stop</button>
+          <button type="button" id="wl-restart">New list</button>
+        </div>
+        <div class="table-scroll">
+          <table id="wl-table">
+            <thead>
+              <tr><th>#</th><th>Word</th><th>Pronunciation</th><th>Translation</th><th>Example and notes</th></tr>
+            </thead>
+            <tbody id="wl-rows"></tbody>
+          </table>
+        </div>
+      </section>
+    </div>
   </main>
 
   <script src="common.js"></script>
@@ -360,5 +426,6 @@
   <script src="talk.js"></script>
   <script src="interpreter.js"></script>
   <script src="dictation.js"></script>
+  <script src="wordlist.js"></script>
 </body>
 </html>

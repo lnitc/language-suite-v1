@@ -46,7 +46,7 @@ const MATERIAL_LIMIT = 8000;
 // Turns an uploaded file into material for a session.
 // Returns { text, image, note }: text for documents, a data URL for images,
 // and a note to show the learner (for example when a long file was cut).
-async function readMaterial(file, { allowImages = false } = {}) {
+async function readMaterial(file, { allowImages = false, warnWhenLong = true } = {}) {
   const empty = { text: "", image: "", note: "" };
   if (!file) return empty;
   if (file.size > 20 * 1024 * 1024) {
@@ -74,7 +74,7 @@ async function readMaterial(file, { allowImages = false } = {}) {
     text = await readFile(file, "readAsText");
   }
 
-  const note = text.length > MATERIAL_LIMIT
+  const note = warnWhenLong && text.length > MATERIAL_LIMIT
     ? `"${file.name}" is long (${text.length.toLocaleString()} characters): only the first ` +
       `${MATERIAL_LIMIT.toLocaleString()} are used. Put the most important part at the top, or upload a shorter file.`
     : "";
@@ -84,14 +84,14 @@ async function readMaterial(file, { allowImages = false } = {}) {
 // Saves lines of text as a .txt file in the Downloads folder. The file is
 // built in the browser from what is on screen; nothing is sent anywhere.
 // Returns nothing; `prefix` and `date` make a name like "dictation-2026-11-13-1013.txt".
-function downloadTextFile(prefix, date, lines) {
+function downloadTextFile(prefix, date, lines, extension = "txt", type = "text/plain") {
   const stamp = dateStamp(date);
-  // Windows line endings, and a UTF-8 marker so Notepad shows every script correctly.
+  // Windows line endings, and a UTF-8 marker so Notepad and Excel show every script correctly.
   const text = "\uFEFF" + lines.join("\n").replace(/\r?\n/g, "\r\n");
-  const url = URL.createObjectURL(new Blob([text], { type: "text/plain;charset=utf-8" }));
+  const url = URL.createObjectURL(new Blob([text], { type: `${type};charset=utf-8` }));
   const link = document.createElement("a");
   link.href = url;
-  link.download = `${prefix}-${stamp.day}-${stamp.time.replace(":", "")}.txt`;
+  link.download = `${prefix}-${stamp.day}-${stamp.time.replace(":", "")}.${extension}`;
   document.body.appendChild(link);
   link.click();
   link.remove();

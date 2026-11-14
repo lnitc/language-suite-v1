@@ -108,3 +108,11 @@ button[type="submit"]:disabled::before {
   .spinner, button[type="submit"]:disabled::before { animation-duration: 3s; }
 }
 #dict-review-form { margin-top: 1.5rem; }
+
+/* ---------- Word list creator ---------- */
+progress { width: 100%; height: 0.7rem; accent-color: var(--accent); }
+.table-scroll { overflow-x: auto; }
+#wl-table td:first-child, #wl-table th:first-child { color: var(--muted); width: 2.2rem; }
+#wl-table td { overflow-wrap: anywhere; }
+#wl-table tr.incomplete td { color: var(--warn); }
+button:disabled { cursor: not-allowed; }

@@ -10,6 +10,7 @@ computer with free local models, or with a cloud AI service if you prefer.
 | Interpreter simulation (voice) | Ready |
 | Vocabulary practice (text or voice) | Ready |
 | Dictation (typed, or handwritten with a photo upload) | Ready |
+| Vocabulary list creator (CSV download) | Ready |
 
 ## How it works
 
@@ -152,6 +153,36 @@ file, for example a CV, a job description, an article or a word list.
 Files are read in memory on your computer and are not saved. Only the first
 8,000 characters of a document are given to the model; the app tells you
 when a file was cut.
+
+## Vocabulary list creator
+
+Makes a word list and saves it as a CSV file, which opens in Excel and can
+be imported into flashcard tools such as Anki.
+
+| Column | Content |
+|---|---|
+| 1 | Word or collocation in the language you are learning |
+| 2 | Pronunciation (hiragana for Japanese, pinyin for Chinese, IPA for Latin-alphabet languages, and so on) |
+| 3 | Translation in the language you chose for explanations |
+| 4 | An example sentence with its translation, then remarks if any (register, nuance, common mistakes) |
+
+Two ways to use it:
+
+- **Create a list:** choose the languages, the difficulty, the number of
+  words (up to 100) and describe what you want in the prompt.
+- **Tidy up your own list:** upload a text file, a PDF with selectable text
+  or a `.docx`, with one word or phrase per line. The layout can be messy:
+  readings, meanings and notes may be missing or mixed up. Every line comes
+  back as a complete entry, and "Number of words" is ignored. At most 100
+  lines are used; the app warns you when a file is longer.
+
+The list is made ten entries at a time, so you can watch it grow, stop and
+continue, and download what is ready. With a local model, 100 entries can
+take several minutes.
+
+Check the result before you study from it: a small local model can get a
+reading or a nuance wrong. Entries the model could not complete are shown
+in colour and keep your original line.
 
 ## Handwritten dictation
 
@@ -299,6 +330,7 @@ app/
     dictation.py     Feature 5
     speech.py        shared speech endpoints (transcribe, synthesize)
     materials.py     reads text from uploaded PDF and Word files
+    wordlist.py      Feature 6 (vocabulary list creator)
   textutils.py       shared text helpers (answer matching, dictation marking)
   static/            browser UI (plain HTML, CSS, JavaScript)
 tests/               run without any model, using a fake provider
