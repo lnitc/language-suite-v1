@@ -19,6 +19,7 @@
     <button class="tab" data-feature="interpreter">Interpreter</button>
     <button class="tab" data-feature="vocabulary">Vocabulary</button>
     <button class="tab" data-feature="dictation">Dictation</button>
+    <button class="tab" data-feature="essay">Essay</button>
     <button class="tab" data-feature="wordlist">Word list creator</button>
   </nav>
 
@@ -353,6 +354,92 @@
         </div>
       </section>
     </div>
+    <!-- ================= Essay ================= -->
+    <div class="feature" id="feature-essay" hidden>
+      <section id="essay-setup">
+        <h2>Essay writing</h2>
+        <form id="essay-setup-form">
+          <div class="row">
+            <label>Language
+              <input id="essay-language" required maxlength="60" placeholder="e.g. English">
+            </label>
+            <label>Level
+              <select id="essay-difficulty">
+                <option value="beginner">Beginner (A1)</option>
+                <option value="elementary">Elementary (A2)</option>
+                <option value="intermediate" selected>Intermediate (B1)</option>
+                <option value="upper_intermediate">Upper-intermediate (B2)</option>
+                <option value="advanced">Advanced (C1)</option>
+              </select>
+            </label>
+          </div>
+          <label>Start with
+            <select id="essay-mode">
+              <option value="assignment">An assignment from the teacher</option>
+              <option value="own">My own essay (no assignment)</option>
+            </select>
+          </label>
+          <label>System prompt <span class="muted">(optional: who the teacher is, language of the feedback)</span>
+            <textarea id="essay-system-prompt" rows="2" maxlength="2000"
+              placeholder="You are an experienced, encouraging writing teacher."></textarea>
+          </label>
+          <label>Session prompt <span class="muted" id="essay-session-hint"></span>
+            <textarea id="essay-session-prompt" rows="2" maxlength="2000"></textarea>
+          </label>
+          <button id="essay-start" type="submit" class="primary">Get an assignment</button>
+        </form>
+      </section>
+
+      <section id="essay-write" hidden>
+        <div id="essay-assignment-box" hidden>
+          <h2>Your assignment</h2>
+          <p id="essay-assignment" class="feedback"></p>
+          <button type="button" id="essay-another">↻ Another assignment</button>
+        </div>
+        <h2 id="essay-write-title">Your essay</h2>
+        <form id="essay-form">
+          <label>Type your essay here, or upload it below
+            <textarea id="essay-text" rows="14" maxlength="20000" spellcheck="false"></textarea>
+          </label>
+          <p id="essay-count" class="muted"></p>
+          <p id="essay-long-note" class="note" hidden></p>
+          <label>Upload instead <span class="muted">(a text, PDF or Word .docx file, or up to four photos of a handwritten essay)</span>
+            <input id="essay-files" type="file" multiple
+              accept=".txt,.md,.pdf,.docx,.doc,text/plain,application/pdf,image/png,image/jpeg,image/webp">
+          </label>
+          <p id="essay-upload-note" class="note" hidden></p>
+          <div class="row">
+            <button type="button" id="essay-back">← Back to the settings</button>
+            <button type="submit" id="essay-submit" class="primary">Check my essay</button>
+          </div>
+        </form>
+      </section>
+
+      <section id="essay-results" hidden>
+        <h2>Your result</h2>
+        <p id="essay-rating" class="score"></p>
+        <table>
+          <thead><tr><th>Criterion</th><th>Rating</th><th>Comment</th></tr></thead>
+          <tbody id="essay-scores"></tbody>
+        </table>
+        <h3>Teacher's feedback</h3>
+        <p id="essay-feedback" class="feedback"></p>
+        <h3 id="essay-corrections-title">Corrections</h3>
+        <div id="essay-corrections"></div>
+        <h3>Ideal version</h3>
+        <p id="essay-ideal" class="feedback ideal-text"></p>
+        <details>
+          <summary>Your essay</summary>
+          <p id="essay-own" class="feedback"></p>
+        </details>
+        <div class="player">
+          <button id="essay-restart" class="primary">New essay</button>
+          <button type="button" id="essay-edit">✎ Edit my essay and check again</button>
+          <button type="button" id="essay-download">⬇ Download result</button>
+        </div>
+      </section>
+    </div>
+
     <!-- ================= Word list creator ================= -->
     <div class="feature" id="feature-wordlist" hidden>
       <section id="wl-setup">
@@ -446,6 +533,7 @@
   <script src="talk.js"></script>
   <script src="interpreter.js"></script>
   <script src="dictation.js"></script>
+  <script src="essay.js"></script>
   <script src="wordlist.js"></script>
 </body>
 </html>

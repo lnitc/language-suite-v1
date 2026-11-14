@@ -10,6 +10,7 @@ computer with free local models, or with a cloud AI service if you prefer.
 | Interpreter simulation (voice) | Ready |
 | Vocabulary practice (text or voice) | Ready |
 | Dictation (typed, or handwritten with a photo upload) | Ready |
+| Essay writing (typed, uploaded or handwritten) | Ready |
 | Vocabulary list creator (CSV download) | Ready |
 
 ## How it works
@@ -153,6 +154,29 @@ file, for example a CV, a job description, an article or a word list.
 Files are read in memory on your computer and are not saved. Only the first
 8,000 characters of a document are given to the model; the app tells you
 when a file was cut.
+
+## Essay writing
+
+Practise writing and get it marked.
+
+1. Choose the language and level. Start with **an assignment from the
+   teacher**, or with **your own essay** if you already have one.
+2. Type the essay, or upload it: a text, PDF or Word `.docx` file, or up to
+   four photos of a handwritten essay. An upload is put into the text box,
+   so you can check it (and fix misread handwriting) before sending.
+3. You get a rating on four criteria (content, organisation, vocabulary,
+   grammar), written feedback, the most important corrections, and an ideal
+   version of your essay. You can edit your essay and have it checked again,
+   and download the result.
+
+Length: up to about 2,000 characters is recommended. Longer essays are
+accepted with a warning, because a small local model takes longer and may
+review the end less carefully. Above 5,000 characters the essay is not
+accepted; check it in two parts.
+
+The rating is the model's judgement, not an exam score: use it to compare
+your own essays over time rather than as an official grade. Handwriting
+needs a chat model that can read images.
 
 ## Vocabulary list creator
 
@@ -347,6 +371,8 @@ app/
     speech.py        shared speech endpoints (transcribe, synthesize)
     materials.py     reads text from uploaded PDF and Word files
     wordlist.py      Feature 6 (vocabulary list creator)
+    essay.py         Feature 7 (essay writing)
+    handwriting.py   reads handwriting from photos (dictation and essay)
   textutils.py       shared text helpers (answer matching, dictation marking)
   static/            browser UI (plain HTML, CSS, JavaScript)
 tests/               run without any model, using a fake provider

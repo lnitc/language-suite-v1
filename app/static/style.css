@@ -132,3 +132,18 @@ button:disabled { cursor: not-allowed; }
   #print-area thead { display: table-header-group; } /* repeat the header on every page */
   #print-area tr { break-inside: avoid; }
 }
+
+/* ---------- Essay ---------- */
+#essay-assignment-box { padding: 0.9rem 1rem; margin-bottom: 1.25rem; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); }
+#essay-assignment-box h2 { font-size: 1rem; }
+#essay-count { margin: -0.5rem 0 0; }
+#essay-text { line-height: 1.6; }
+.correction { padding: 0.5rem 0; border-top: 1px solid var(--line); }
+.correction p { margin: 0.15rem 0; }
+.correction .was { color: var(--bad); text-decoration: line-through; }
+.correction .now { color: var(--good); font-weight: 600; }
+.ideal-text { padding: 0.9rem 1rem; border-left: 4px solid var(--good); background: var(--bg); border-radius: 0 8px 8px 0; }
+details { margin: 1rem 0; }
+summary { cursor: pointer; font-weight: 600; }
+/* Greyed out because the essay is too long, not because something is loading. */
+#essay-submit:disabled::before { display: none; }
