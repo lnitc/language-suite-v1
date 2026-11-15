@@ -176,11 +176,20 @@
       <section id="interp-setup">
         <h2>Interpreter simulation</h2>
         <form id="interp-setup-form">
+          <label>Speakers
+            <select id="interp-speakers">
+              <option value="1" selected>1 speaker: a speech, interpreted one way</option>
+              <option value="2">2 speakers: a dialogue in two languages, interpreted both ways</option>
+            </select>
+          </label>
+          <p id="interp-dialogue-hint" class="muted" hidden>Two people who do not share a language talk
+            through you. You interpret what Speaker A says into Speaker B's language, and what
+            Speaker B says into Speaker A's language.</p>
           <div class="row">
-            <label>You hear
+            <label><span id="interp-source-label">You hear</span>
               <input id="interp-source" required maxlength="60" placeholder="e.g. English">
             </label>
-            <label>You interpret into
+            <label><span id="interp-target-label">You interpret into</span>
               <input id="interp-target" required maxlength="60" placeholder="e.g. Japanese">
             </label>
           </div>
@@ -194,10 +203,10 @@
             </select>
           </label>
           <div class="row">
-            <label>Sentences before you interpret
+            <label><span id="interp-per-label">Sentences before you interpret</span>
               <input id="interp-per-batch" type="number" min="1" max="5" value="2" required>
             </label>
-            <label>Number of parts
+            <label><span id="interp-count-label">Number of parts</span>
               <input id="interp-batch-count" type="number" min="1" max="10" value="4" required>
             </label>
           </div>
@@ -206,15 +215,16 @@
               placeholder="You are an experienced interpreter trainer."></textarea>
           </label>
           <label>Session prompt <span class="muted">(optional: topic, setting)</span>
-            <textarea id="interp-session-prompt" rows="2" maxlength="2000"
-              placeholder="e.g. A company president's speech about the new factory"></textarea>
+            <textarea id="interp-session-prompt" rows="2" maxlength="2000"></textarea>
           </label>
           <button id="interp-start" type="submit" class="primary">Start session</button>
         </form>
       </section>
 
       <section id="interp-live" hidden>
+        <p id="interp-setting" class="info" hidden></p>
         <p id="interp-progress" class="muted"></p>
+        <p id="interp-direction" class="direction" hidden></p>
         <p id="interp-status" class="status" aria-live="polite"></p>
         <div class="player">
           <button type="button" id="interp-play" class="primary">▶ Play</button>

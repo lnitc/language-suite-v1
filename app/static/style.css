@@ -177,3 +177,8 @@ fieldset.question input { width: auto; margin-top: 0.3rem; }
 .badge.right { color: var(--good); }
 .badge.wrong { color: var(--bad); }
 .badge.none { color: var(--warn); }
+
+/* ---------- Interpreter: dialogue mode ---------- */
+.direction { font-size: 1.1rem; font-weight: 600; margin: 0.2rem 0 0.6rem; }
+.direction .arrow { color: var(--accent); }
+.info { padding: 0.6rem 0.9rem; border-radius: 8px; border: 1px solid var(--line); background: var(--bg); font-size: 0.95rem; }

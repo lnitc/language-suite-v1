@@ -137,6 +137,25 @@ python -m uvicorn app.main:app --port 8000
 Open <http://localhost:8000> in your browser. Press `Ctrl+C` in PowerShell to
 stop the app. It only listens on your own computer, not on the network.
 
+## Interpreter simulation
+
+Practise consecutive interpreting by voice. Choose the number of speakers:
+
+| | 1 speaker (speech) | 2 speakers (dialogue) |
+|---|---|---|
+| What you hear | One person giving a talk in one language | Two people who do not share a language, talking through you |
+| What you do | Interpret each part into the other language | Interpret each turn into the other person's language, so the direction changes every turn |
+| Languages you need to speak | The target language | Both languages |
+| Settings | Sentences before you interpret, number of parts | Sentences per turn, number of turns |
+
+In a dialogue, the page shows the situation and who the speakers are, and
+for every turn who is speaking and which language to interpret into. The
+voice and the microphone switch language automatically with each turn, so
+your browser needs a voice for both languages (see "Voices").
+
+At the end you get an ideal version and a comment for every part or turn,
+an overall comment, and a download.
+
 ## Uploading material
 
 The conversation, job interview, vocabulary and dictation features accept a

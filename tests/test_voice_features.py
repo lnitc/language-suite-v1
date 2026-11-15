@@ -225,8 +225,12 @@ def test_interpreter_batches_and_feedback(client):
             "session_prompt": "A factory tour",
         },
     ).json()
-    assert started["batches"] == ["One. Two.", "Three. Four."]  # trimmed to 2 x 2
-    assert (started["source_language_code"], started["target_language_code"]) == ("en-US", "ja-JP")
+    assert [part["text"] for part in started["parts"]] == ["One. Two.", "Three. Four."]  # trimmed to 2 x 2
+    assert started["mode"] == "speech"
+    assert started["parts"][0] == {
+        "text": "One. Two.", "from_language": "English", "to_language": "Japanese",
+        "speak_code": "en-US", "answer_code": "ja-JP", "speaker": "", "role": "",
+    }
     assert "exactly 4 sentences" in fake.calls[0][1]["content"]
     assert "A factory tour" in fake.calls[0][1]["content"]
 
@@ -234,8 +238,10 @@ def test_interpreter_batches_and_feedback(client):
     result = client.post(url, json={"interpretations": ["一、二"]}).json()
     assert result["overall"] == "Keep going."
     assert result["batches"][0] == {
-        "number": 1, "original": "One. Two.", "interpretation": "一、二", "ideal": "一。二。", "comment": "Good.",
+        "number": 1, "speaker": "", "role": "", "from_language": "English", "to_language": "Japanese",
+        "original": "One. Two.", "interpretation": "一、二", "ideal": "一。二。", "comment": "Good.",
     }
+    assert result["mode"] == "speech"
     assert result["batches"][1]["interpretation"] == ""
     assert "(nothing said)" in fake.calls[1][1]["content"]
     assert client.post(url, json={"interpretations": []}).json() == result
@@ -251,6 +257,94 @@ def test_interpreter_bad_feedback_can_be_retried(client):
     url = f"/api/interpreter/sessions/{sid}/submit"
     assert client.post(url, json={"interpretations": ["a", "b"]}).status_code == 502
     assert client.post(url, json={"interpretations": ["a", "b"]}).json()["overall"] == "Keep going."
+
+
+DIALOGUE = json.dumps(
+    {
+        "language_a_code": "en-US",
+        "language_b_code": "ja-JP",
+        "setting": "At a pharmacy",
+        "speaker_a": "tourist",
+        "speaker_b": "pharmacist",
+        "turns": [
+            {"speaker": "A", "text": "Do you have something for a headache?"},
+            {"speaker": "Speaker B", "text": "はい、こちらの薬がよく効きます。"},
+            {"text": "How often should I take it?"},  # no label: speakers alternate
+            {"speaker": "B", "text": ""},  # empty: dropped
+            {"speaker": "B", "text": "一日三回、食後に飲んでください。"},
+            {"speaker": "A", "text": "One turn too many."},
+        ],
+    }
+)
+
+
+def test_dialogue_mode_interprets_both_ways(client):
+    review = json.dumps(
+        {
+            "batches": [
+                {"ideal": "頭痛に効く薬はありますか。", "comment": "Good."},
+                {"ideal": "Yes, this medicine works well.", "comment": "You left out 'well'."},
+            ],
+            "overall": "Mind the polite forms.",
+        }
+    )
+    fake = FakeChat([DIALOGUE, review])
+    use(chat=fake)
+    started = client.post(
+        "/api/interpreter/sessions",
+        json={
+            "speakers": 2,
+            "source_language": "English",
+            "target_language": "Japanese",
+            "sentences_per_batch": 1,
+            "batch_count": 4,
+            "session_prompt": "A tourist at a pharmacy",
+        },
+    ).json()
+    prompt = fake.calls[0][1]["content"]
+    assert "Speaker A speaks only English" in prompt and "Speaker B speaks only Japanese" in prompt
+    assert "exactly 4 turns" in prompt and "one sentence" in prompt and "A tourist at a pharmacy" in prompt
+
+    assert (started["mode"], started["setting"]) == ("dialogue", "At a pharmacy")
+    assert started["roles"] == {"A": "tourist", "B": "pharmacist"}
+    parts = started["parts"]
+    assert len(parts) == 4  # the empty turn is dropped, the extra one is cut
+    assert [p["speaker"] for p in parts] == ["A", "B", "A", "B"]
+    # Each turn is heard in the speaker's language and interpreted into the other one.
+    assert parts[0] == {
+        "text": "Do you have something for a headache?", "from_language": "English", "to_language": "Japanese",
+        "speak_code": "en-US", "answer_code": "ja-JP", "speaker": "A", "role": "tourist",
+    }
+    assert (parts[1]["from_language"], parts[1]["to_language"], parts[1]["speak_code"], parts[1]["answer_code"]) == (
+        "Japanese", "English", "ja-JP", "en-US",
+    )
+
+    url = f"/api/interpreter/sessions/{started['session_id']}/submit"
+    result = client.post(url, json={"interpretations": ["頭痛の薬ありますか", "Yes this medicine works"]}).json()
+    asked = fake.calls[1][1]["content"]
+    assert "Speaker A (tourist) said, in English: Do you have something for a headache?" in asked
+    assert "Learner's interpretation into English: Yes this medicine works" in asked
+    assert "The situation: At a pharmacy." in asked
+    assert result["mode"] == "dialogue" and result["overall"] == "Mind the polite forms."
+    second = result["batches"][1]
+    assert (second["speaker"], second["role"], second["from_language"], second["to_language"]) == (
+        "B", "pharmacist", "Japanese", "English",
+    )
+    assert second["ideal"] == "Yes, this medicine works well."
+    assert result["batches"][3]["interpretation"] == ""
+
+
+def test_dialogue_without_usable_turns_is_an_error(client):
+    use(chat=FakeChat([json.dumps({"turns": [{"speaker": "A", "text": " "}]})]))
+    response = client.post(
+        "/api/interpreter/sessions",
+        json={"speakers": 2, "source_language": "English", "target_language": "Japanese"},
+    )
+    assert response.status_code == 502 and "dialogue" in response.json()["detail"]
+    assert client.post(
+        "/api/interpreter/sessions",
+        json={"speakers": 3, "source_language": "English", "target_language": "Japanese"},
+    ).status_code == 422
 
 
 def test_vocabulary_returns_language_codes_for_voice_mode(client):
@@ -317,3 +411,119 @@ def test_local_whisper_decodes_a_recording_and_skips_silence(monkeypatch):
     assert len(model.calls) == 1
     with pytest.raises(ProviderError, match="could not be read"):
         asyncio.run(ear.transcribe(b"not audio"))
+
+
+# ---------- the ideal version must be in the right language ----------
+
+ZOO = json.dumps(
+    {
+        "language_a_code": "en-US",
+        "language_b_code": "ja-JP",
+        "setting": "Two friends making plans",
+        "speaker_a": "Joe, exchange student",
+        "speaker_b": "Yuki, classmate",
+        "turns": [
+            {"speaker": "A", "text": "Do you want to go to the zoo next weekend? I think it will be a lot of fun."},
+            {"speaker": "B", "text": "いいね。何時に会う？"},
+        ],
+    }
+)
+WRONG_LANGUAGE_REVIEW = json.dumps(
+    {
+        "batches": [
+            # The reported bug: English where Japanese is needed.
+            {"ideal": "Next weekend, would you like to go to the zoo? I think it will be a lot of fun.", "comment": "Said 'this weekend'."},
+            # And the mirror image: Japanese where English is needed.
+            {"ideal": "いいですね。何時に会いましょうか。", "comment": "Fine."},
+        ],
+        "overall": "Watch the dates.",
+    }
+)
+
+
+def start_zoo(client):
+    return client.post(
+        "/api/interpreter/sessions",
+        json={"speakers": 2, "source_language": "English", "target_language": "Japanese", "batch_count": 2},
+    ).json()["session_id"]
+
+
+def test_ideal_version_in_the_wrong_language_is_asked_for_again(client):
+    into_japanese = json.dumps({"ideals": [{"number": 1, "ideal": "来週末、動物園に行かない？きっと楽しいと思うよ。"}]})
+    into_english = json.dumps({"ideals": [{"number": 2, "ideal": "Sounds good. What time shall we meet?"}]})
+
+    class ByLanguage(FakeChat):  # the two repair calls can come in either order
+        async def chat(self, messages, *, json_mode=False, temperature=0.7):
+            prompt = messages[-1]["content"]
+            if "Interpret each numbered sentence" in prompt:
+                self.calls.append(messages)
+                return into_japanese if "into Japanese" in prompt else into_english
+            return await super().chat(messages, json_mode=json_mode, temperature=temperature)
+
+    fake = ByLanguage([ZOO, WRONG_LANGUAGE_REVIEW])
+    use(chat=fake)
+    sid = start_zoo(client)
+    result = client.post(
+        f"/api/interpreter/sessions/{sid}/submit",
+        json={"interpretations": ["今週末に東京動物園に行かないか 超楽しいと思うよ", "Nice what time"]},
+    ).json()
+
+    review_prompt = fake.calls[1][1]["content"]
+    assert "The ideal version of this part must be written in Japanese." in review_prompt
+    assert "The ideal version of this part must be written in English." in review_prompt
+    assert [row["ideal"] for row in result["batches"]] == [
+        "来週末、動物園に行かない？きっと楽しいと思うよ。",
+        "Sounds good. What time shall we meet?",
+    ]
+    assert result["batches"][0]["comment"] == "Said 'this weekend'."  # comments are kept
+    repairs = [call[1]["content"] for call in fake.calls[2:]]
+    assert len(repairs) == 2  # one focused request per target language
+    japanese = next(text for text in repairs if "into Japanese" in text)
+    assert "1. (English) Do you want to go to the zoo" in japanese and "いいね" not in japanese
+
+
+def test_ideal_still_in_the_wrong_language_is_left_out(client):
+    still_english = json.dumps({"ideals": [{"number": 1, "ideal": "Shall we go to the zoo next weekend?"}]})
+    use(chat=FakeChat([ZOO, WRONG_LANGUAGE_REVIEW, still_english, ProviderError("model offline")]))
+    result = client.post(
+        f"/api/interpreter/sessions/{start_zoo(client)}/submit", json={"interpretations": ["x", "y"]}
+    ).json()
+    # Rather no ideal version than one in the wrong language; the rest of the result stands.
+    assert [row["ideal"] for row in result["batches"]] == ["", ""]
+    assert result["overall"] == "Watch the dates."
+
+
+def test_language_check_rules():
+    from app.features.interpreter import Part, language_problem, script_of
+
+    assert [script_of(t) for t in ("Hello there", "こんにちは、世界", "Привет", "안녕하세요", "123 !?")] == [
+        "latin", "cjk", "cyrillic", "hangul", None,
+    ]
+    assert script_of("JRの駅で会いましょう") == "cjk"  # a few Latin letters do not change the verdict
+
+    english_to_japanese = Part("Do you want to go to the zoo?", "English", "Japanese", "", "")
+    scripts = {"English": "latin", "Japanese": "cjk"}
+    assert language_problem("動物園に行かない？", english_to_japanese, scripts) == ""
+    assert language_problem("Would you like to go to the zoo?", english_to_japanese, scripts) == "wrong"
+    assert language_problem("", english_to_japanese, scripts) == ""
+
+    # Same alphabet on both sides: only a near copy of the original is suspicious.
+    english_to_spanish = Part("Do you want to go to the zoo next weekend?", "English", "Spanish", "", "")
+    same = {"English": "latin", "Spanish": "latin"}
+    assert language_problem("¿Quieres ir al zoológico el próximo fin de semana?", english_to_spanish, same) == ""
+    assert language_problem("Do you want to go to the zoo next weekend with me?", english_to_spanish, same) == "copy"
+
+
+def test_same_alphabet_copy_is_retried_once_and_the_retry_is_trusted(client):
+    speech = json.dumps({"sentences": ["Do you want to go to the zoo next weekend?"]})
+    review = json.dumps({"batches": [{"ideal": "Do you want to go to the zoo next weekend?", "comment": "ok"}], "overall": "ok"})
+    retry = json.dumps({"ideals": [{"number": 1, "ideal": "¿Quieres ir al zoológico el próximo fin de semana?"}]})
+    fake = FakeChat([speech, review, retry])
+    use(chat=fake)
+    sid = client.post(
+        "/api/interpreter/sessions",
+        json={"source_language": "English", "target_language": "Spanish", "sentences_per_batch": 1, "batch_count": 1},
+    ).json()["session_id"]
+    result = client.post(f"/api/interpreter/sessions/{sid}/submit", json={"interpretations": ["Quieres ir al zoo"]}).json()
+    assert result["batches"][0]["ideal"] == "¿Quieres ir al zoológico el próximo fin de semana?"
+    assert len(fake.calls) == 3
