@@ -28,6 +28,7 @@
     <button class="tab" data-section="vocabulary" data-feature="wordlist" hidden>Word list creator</button>
     <button class="tab" data-section="writing" data-feature="dictation" hidden>Dictation</button>
     <button class="tab" data-section="writing" data-feature="essay" hidden>Essay</button>
+    <button class="tab" data-section="writing" data-feature="translation" hidden>Translation</button>
     <button class="tab" data-section="reading" data-feature="reading" hidden>Reading comprehension</button>
   </nav>
 
@@ -458,6 +459,116 @@
       </section>
     </div>
 
+    <!-- ================= Translation ================= -->
+    <div class="feature" id="feature-translation" hidden>
+      <section id="tr-setup">
+        <h2>Written translation</h2>
+        <form id="tr-setup-form">
+          <div class="row">
+            <label>Translate from
+              <input id="tr-source-language" required maxlength="60" placeholder="e.g. English">
+            </label>
+            <label>Translate into
+              <input id="tr-target-language" required maxlength="60" placeholder="e.g. Japanese">
+            </label>
+          </div>
+          <label>Start with
+            <select id="tr-mode">
+              <option value="teacher">A text from the teacher</option>
+              <option value="own">My own text and translation</option>
+            </select>
+          </label>
+          <div class="row">
+            <label>Difficulty
+              <select id="tr-difficulty">
+                <option value="beginner">Beginner (A1)</option>
+                <option value="elementary">Elementary (A2)</option>
+                <option value="intermediate" selected>Intermediate (B1)</option>
+                <option value="upper_intermediate">Upper-intermediate (B2)</option>
+                <option value="advanced">Advanced (C1)</option>
+              </select>
+            </label>
+            <label id="tr-length-label">Text length
+              <select id="tr-length">
+                <option value="short">Short (about 60 words / 120 characters)</option>
+                <option value="medium" selected>Medium (about 120 words / 250 characters)</option>
+                <option value="long">Long (about 200 words / 400 characters)</option>
+              </select>
+            </label>
+          </div>
+          <label>System prompt <span class="muted">(optional: who the teacher is, language of the feedback)</span>
+            <textarea id="tr-system-prompt" rows="2" maxlength="2000"
+              placeholder="You are an experienced translator and translation teacher."></textarea>
+          </label>
+          <label>Session prompt <span class="muted" id="tr-session-hint"></span>
+            <textarea id="tr-session-prompt" rows="2" maxlength="2000"></textarea>
+          </label>
+          <button id="tr-start" type="submit" class="primary">Get a text to translate</button>
+        </form>
+      </section>
+
+      <section id="tr-write" hidden>
+        <form id="tr-form">
+          <div id="tr-given">
+            <h2 id="tr-given-title"></h2>
+            <article class="reading-text"><div id="tr-given-text"></div></article>
+            <button type="button" id="tr-another">↻ Another text</button>
+          </div>
+          <div id="tr-own" hidden>
+            <label><span id="tr-own-label"></span>
+              <textarea id="tr-source-text" rows="8" maxlength="12000" spellcheck="false"></textarea>
+            </label>
+            <p id="tr-source-count" class="muted count"></p>
+            <label>Upload the text instead <span class="muted">(a text, PDF or Word .docx file)</span>
+              <input id="tr-source-file" type="file" accept=".txt,.md,.pdf,.docx,.doc,text/plain,application/pdf">
+            </label>
+          </div>
+          <h2 id="tr-translation-title"></h2>
+          <label>Type your translation here, or upload it below
+            <textarea id="tr-translation" rows="10" maxlength="12000" spellcheck="false"></textarea>
+          </label>
+          <p id="tr-translation-count" class="muted count"></p>
+          <p id="tr-long-note" class="note" hidden></p>
+          <label>Upload instead <span class="muted">(a text, PDF or Word .docx file, or up to four photos of a handwritten translation)</span>
+            <input id="tr-translation-files" type="file" multiple
+              accept=".txt,.md,.pdf,.docx,.doc,text/plain,application/pdf,image/png,image/jpeg,image/webp">
+          </label>
+          <p id="tr-upload-note" class="note" hidden></p>
+          <div class="row">
+            <button type="button" id="tr-back">← Back to the settings</button>
+            <button type="submit" id="tr-submit" class="primary">Check my translation</button>
+          </div>
+        </form>
+      </section>
+
+      <section id="tr-results" hidden>
+        <h2>Your result</h2>
+        <p id="tr-rating" class="score"></p>
+        <table>
+          <thead><tr><th>Criterion</th><th>Rating</th><th>Comment</th></tr></thead>
+          <tbody id="tr-scores"></tbody>
+        </table>
+        <h3>Teacher's feedback and tips</h3>
+        <p id="tr-feedback" class="feedback"></p>
+        <h3 id="tr-corrections-title">Corrections</h3>
+        <div id="tr-corrections"></div>
+        <h3>Ideal version</h3>
+        <p id="tr-ideal" class="feedback ideal-text"></p>
+        <details>
+          <summary>The source text and your translation</summary>
+          <h3>Source text</h3>
+          <p id="tr-result-source" class="feedback"></p>
+          <h3>Your translation</h3>
+          <p id="tr-result-translation" class="feedback"></p>
+        </details>
+        <div class="player">
+          <button id="tr-restart" class="primary">New translation</button>
+          <button type="button" id="tr-edit">✎ Edit my translation and check again</button>
+          <button type="button" id="tr-download">⬇ Download result</button>
+        </div>
+      </section>
+    </div>
+
     <!-- ================= Reading comprehension ================= -->
     <div class="feature" id="feature-reading" hidden>
       <section id="read-setup">
@@ -639,6 +750,7 @@
   <script src="interpreter.js"></script>
   <script src="dictation.js"></script>
   <script src="essay.js"></script>
+  <script src="translation.js"></script>
   <script src="wordlist.js"></script>
   <script src="reading.js"></script>
 </body>

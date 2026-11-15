@@ -182,3 +182,11 @@ fieldset.question input { width: auto; margin-top: 0.3rem; }
 .direction { font-size: 1.1rem; font-weight: 600; margin: 0.2rem 0 0.6rem; }
 .direction .arrow { color: var(--accent); }
 .info { padding: 0.6rem 0.9rem; border-radius: 8px; border: 1px solid var(--line); background: var(--bg); font-size: 0.95rem; }
+
+/* ---------- Translation ---------- */
+#tr-given { margin-bottom: 1.25rem; }
+#tr-given .reading-text { margin-bottom: 0.6rem; }
+.count { margin: -0.5rem 0 0; }
+#tr-submit:disabled::before { display: none; }
+.correction .from { font-weight: 600; }
+.correction .missing { color: var(--bad); font-style: italic; }

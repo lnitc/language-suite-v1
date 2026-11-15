@@ -9,7 +9,7 @@ The features are grouped into four sections:
 |---|---|
 | Speaking | Conversation partner, job interview rehearsal, interpreter simulation (all by voice) |
 | Vocabulary | Vocabulary practice (text or voice), vocabulary list creator (CSV and other formats) |
-| Writing | Dictation (typed or handwritten), essay writing (typed, uploaded or handwritten) |
+| Writing | Dictation (typed or handwritten), essay writing and written translation (typed, uploaded or handwritten) |
 | Reading | Reading comprehension (a text with multiple-choice questions) |
 
 ## How it works
@@ -195,6 +195,27 @@ accepted; check it in two parts.
 The rating is the model's judgement, not an exam score: use it to compare
 your own essays over time rather than as an official grade. Handwriting
 needs a chat model that can read images.
+
+## Written translation
+
+Practise translating a text and get it marked.
+
+1. Choose the language pair, difficulty and text length. Start with **a
+   text from the teacher**, or with **your own text and translation** if
+   you already have both.
+2. Type the translation, or upload it: a text, PDF or Word `.docx` file, or
+   up to four photos of handwriting. With your own text, type, paste or
+   upload the source text as well. Uploads are put into the text boxes, so
+   you can check them before sending.
+3. You get a rating on four criteria (accuracy, completeness, naturalness,
+   grammar and vocabulary), feedback with tips, the most important
+   corrections, and an ideal version. You can edit your translation and
+   have it checked again, and download the result.
+
+Length: up to about 1,500 characters is recommended for the source text and
+for the translation, each. Longer texts are accepted with a warning, up to
+3,000 characters. The limits are lower than for an essay because the model
+has to read two texts and write a third.
 
 ## Reading comprehension
 
@@ -415,6 +436,7 @@ app/
     wordlist.py      Feature 6 (vocabulary list creator)
     essay.py         Feature 7 (essay writing)
     reading.py       Feature 8 (reading comprehension)
+    translation.py   Feature 9 (written translation)
     handwriting.py   reads handwriting from photos (dictation and essay)
   textutils.py       shared text helpers (answer matching, dictation marking)
   static/            browser UI (plain HTML, CSS, JavaScript)
