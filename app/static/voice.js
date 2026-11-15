@@ -174,11 +174,61 @@ const voice = (() => {
     return (await response.json()).text;
   }
 
+  // Hands-free: watches the loudness of the microphone and reports when the
+  // speaker has finished (a pause after speech), or never started.
+  const handsFree = { silenceMs: 2000, giveUpMs: 20000, minimumLevel: 0.02, loudTicks: 2 };
+
+  function watchForSilence(onFinished, onNothingHeard) {
+    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContextClass || !stream) return () => {};
+    const audio = new AudioContextClass();
+    const analyser = audio.createAnalyser();
+    analyser.fftSize = 1024;
+    audio.createMediaStreamSource(stream).connect(analyser);
+    const samples = new Float32Array(analyser.fftSize);
+    const started = Date.now();
+    let noise = null;   // loudness of the room: follows the quietest moments
+    let loudTicks = 0;
+    let spoke = false;
+    let quietSince = Date.now();
+
+    const timer = setInterval(() => {
+      analyser.getFloatTimeDomainData(samples);
+      let sum = 0;
+      for (const sample of samples) sum += sample * sample;
+      const level = Math.sqrt(sum / samples.length);
+      const now = Date.now();
+      // The room's own noise is the quietest level seen, allowed to creep up
+      // slowly. Measuring it this way works even if the learner starts
+      // talking at once, which a "listen to the room first" approach gets wrong.
+      noise = noise === null || level < noise ? level : noise * 1.005;
+      const threshold = Math.max(handsFree.minimumLevel, noise * 3);
+      if (level > threshold) {
+        loudTicks += 1;
+        if (loudTicks >= handsFree.loudTicks) spoke = true; // one click or cough is not speech
+        quietSince = now;
+      } else {
+        loudTicks = 0;
+        if (spoke && now - quietSince >= handsFree.silenceMs) onFinished();
+        else if (!spoke && now - started >= handsFree.giveUpMs) onNothingHeard();
+      }
+    }, 100);
+
+    return () => {
+      clearInterval(timer);
+      audio.close().catch(() => {});
+    };
+  }
+
   // Turns a button into a microphone: press to talk, press again to stop.
-  // options.language(): language code of the speech; options.onText(text): what to do with it.
+  // options.language(): language code of the speech.
+  // options.onText(text): what to do with the recognised words.
+  // options.handsFree(): optional; true makes the recording stop by itself after a pause.
+  // options.onNothingHeard(): optional; called when hands-free listening gave up.
   function attachMic(button, options) {
     let state = "idle";
     let enabled = true;
+    let stopWatching = null;
     const labels = { idle: "🎤 Speak", recording: "■ Stop", busy: "Listening to your recording…" };
 
     function render() {
@@ -187,34 +237,67 @@ const voice = (() => {
       button.disabled = state === "busy" || (!enabled && state === "idle");
     }
 
-    button.addEventListener("click", async () => {
+    function endWatching() {
+      if (stopWatching) stopWatching();
+      stopWatching = null;
+    }
+
+    async function begin() {
+      stop(); // do not record the teacher's voice
+      await startRecording();
+      state = "recording";
+      render();
+      if (options.handsFree && options.handsFree()) {
+        stopWatching = watchForSilence(
+          () => { if (state === "recording") run(finish); },
+          () => { if (state === "recording") run(giveUp); }
+        );
+      }
+    }
+
+    async function finish() {
+      endWatching();
+      state = "busy";
+      render();
+      const text = await transcribe(await stopRecording(), options.language());
+      if (text) await options.onText(text);
+      else showError("No words were recognised. Please try again, a little closer to the microphone.");
+    }
+
+    async function giveUp() {
+      endWatching();
+      await stopRecording();
+      state = "idle";
+      if (options.onNothingHeard) options.onNothingHeard();
+    }
+
+    async function run(action) {
       showError("");
       try {
-        if (state === "idle") {
-          stop(); // do not record the teacher's voice
-          await startRecording();
-          state = "recording";
-          render();
-        } else if (state === "recording") {
-          state = "busy";
-          render();
-          const text = await transcribe(await stopRecording(), options.language());
-          if (text) await options.onText(text);
-          else showError("No words were recognised. Please try again, a little closer to the microphone.");
-        }
+        await action();
       } catch (error) {
+        endWatching();
         if (recorder) await stopRecording();
+        if (state === "recording") state = "idle";
         showError(error.message);
       } finally {
         if (state === "busy") state = "idle";
         render();
       }
+    }
+
+    button.addEventListener("click", () => {
+      if (state === "idle") run(begin);
+      else if (state === "recording") run(finish);
     });
 
     render();
     return {
       setEnabled(value) { enabled = value; render(); },
+      // Starts listening without a click (hands-free mode).
+      start() { if (state === "idle" && enabled) run(begin); },
       async reset() {
+        endWatching();
         if (recorder) await stopRecording();
         state = "idle";
         render();
@@ -224,5 +307,5 @@ const voice = (() => {
 
   if ("speechSynthesis" in window) window.speechSynthesis.getVoices(); // start loading the list
 
-  return { speak, stop, fillSelect, attachMic };
+  return { speak, stop, fillSelect, attachMic, handsFree };
 })();

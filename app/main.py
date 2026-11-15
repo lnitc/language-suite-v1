@@ -13,6 +13,7 @@ from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from .config import get_settings
+from .context import RequestContext
 from .features import (
     dictation,
     essay,
@@ -28,6 +29,7 @@ from .features import (
 from .providers.base import ProviderError
 
 app = FastAPI(title="Language Suite")
+app.add_middleware(RequestContext)
 logger = logging.getLogger("uvicorn.error")
 
 
@@ -49,6 +51,7 @@ async def health() -> dict:
         "llm_key_set": bool(settings.llm_api_key),
         "tts_provider": settings.tts_provider,
         "stt_provider": settings.stt_provider,
+        "llm_context_tokens": settings.llm_context_tokens,
     }
 
 

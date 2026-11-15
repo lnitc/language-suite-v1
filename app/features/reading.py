@@ -25,6 +25,7 @@ from pydantic import BaseModel, Field
 
 from ..providers.base import ChatProvider, ProviderError
 from ..providers.factory import get_chat_provider
+from ..context import feedback_language
 from ..textutils import normalize, parse_json
 from .dictation import DIFFICULTIES
 
@@ -245,7 +246,7 @@ async def _write_questions(session: Session, count: int, chat: ChatProvider) -> 
         )
     parts.append(
         '"explanation" says why the correct option is right, pointing to the part of '
-        "the text that shows it, in one or two sentences. Write explanations in English "
+        "the text that shows it, in one or two sentences. Write explanations in " + feedback_language() + " "
         "unless the system prompt asks for another language."
     )
     parts.append(
@@ -270,7 +271,51 @@ async def _write_questions(session: Session, count: int, chat: ChatProvider) -> 
         if question and normalize(question.question) not in asked and len(questions) < count:
             asked.add(normalize(question.question))
             questions.append(question)
+    if session.question_style == "tricky":
+        questions = await _confirmed(session, questions, chat)
     return questions
+
+
+async def _confirmed(session: Session, questions: list[Question], chat: ChatProvider) -> list[Question]:
+    """A second opinion on tricky questions. The model answers each question
+    from the text alone, without being told the intended answer. A question
+    is kept only if that answer agrees with the key: if even its author
+    cannot find the "correct" option again, the question is ambiguous.
+    """
+    if not questions:
+        return questions
+    blocks = [
+        f"Question {n}: {q.question}\n" + "\n".join(f"  {k}. {option}" for k, option in enumerate(q.options, start=1))
+        for n, q in enumerate(questions, start=1)
+    ]
+    messages = [
+        {"role": "system", "content": "You are a careful reader taking a reading comprehension test."},
+        {
+            "role": "user",
+            "content": (
+                "Read the text and answer each question. Choose the one option that the "
+                "text supports. If two options seem equally right, or none does, answer 0.\n\n"
+                f"--- text ---\n{session.title}\n\n{session.text}\n--- end of text ---\n\n"
+                + "\n\n".join(blocks)
+                + '\n\nReply with JSON only: {"answers": [{"question": 1, "answer": 2}]}, where '
+                '"answer" is the number of the option (1 to 4), or 0.'
+            ),
+        },
+    ]
+    try:
+        entries = parse_json(await chat.chat(messages, json_mode=True, temperature=0.0)).get("answers", [])
+    except (ProviderError, ValueError):
+        return questions  # no second opinion available: keep them rather than lose them all
+    chosen: dict[int, int] = {}
+    for entry in entries if isinstance(entries, list) else []:
+        if isinstance(entry, dict):
+            try:
+                chosen[int(entry.get("question"))] = int(entry.get("answer"))
+            except (TypeError, ValueError):
+                continue
+    if not chosen:
+        return questions
+    return [q for n, q in enumerate(questions, start=1) if chosen.get(n) == q.correct + 1]
 
 
 def _public_questions(session: Session) -> list[dict]:
@@ -289,6 +334,8 @@ async def make_questions(
     rounds if some were unusable. Calling again continues where it stopped."""
     session = _get_session(session_id)
     rounds = -(-session.question_count // QUESTIONS_PER_CALL) + 2
+    if session.question_style == "tricky":
+        rounds += 1  # some tricky questions are rejected by the checking pass
     for _ in range(rounds):
         missing = session.question_count - len(session.questions)
         if missing <= 0:
@@ -325,7 +372,7 @@ async def _explain_mistakes(session: Session, rows: list[dict], chat: ChatProvid
                 "about the text below and got some wrong. For each one, explain in one or "
                 "two sentences why the option they chose is wrong according to the text "
                 "(what the text really says, or what they probably misread). Be kind and "
-                "specific. Write in English unless the system prompt asks for another language.\n\n"
+                "specific. Write in " + feedback_language() + " unless the system prompt asks for another language.\n\n"
                 + "\n\n".join(blocks)
                 + '\n\nReply with JSON only: {"explanations": [{"number": 1, "why_wrong": "..."}]}, '
                 "using the question numbers above.\n\n"

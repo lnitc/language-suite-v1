@@ -18,6 +18,7 @@ def _openai_compatible_chat(settings: Settings) -> ChatProvider:
         model=settings.llm_model,
         api_key=settings.llm_api_key,
         timeout=settings.llm_timeout,
+        context_tokens=settings.llm_context_tokens,
     )
 
 

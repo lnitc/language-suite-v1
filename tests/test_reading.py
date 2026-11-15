@@ -152,7 +152,7 @@ def test_no_questions_can_be_retried_and_missing_explanations_do_not_matter(clie
 
 
 def test_question_style_changes_the_instructions(client):
-    fake = FakeChat([TEXT, batch(q(1)), TEXT, batch(q(1))])
+    fake = FakeChat([TEXT, batch(q(1)), TEXT, batch(q(1)), ProviderError("no second opinion in this test")])
     use(fake)
     plain = start(client, question_count=1).json()["session_id"]
     client.post(f"/api/reading/sessions/{plain}/questions")
@@ -170,3 +170,36 @@ def test_question_style_changes_the_instructions(client):
     result = client.post(f"/api/reading/sessions/{tricky}/submit", json={"answers": [None]}).json()
     assert result["question_style"] == "tricky"
     assert start(client, question_style="impossible").status_code == 422
+
+
+def test_tricky_questions_get_a_second_opinion(client, monkeypatch):
+    monkeypatch.setattr(reading._rng, "shuffle", lambda order: None)  # keep the options in place
+    # The checker agrees on question 1, disagrees on 2, and cannot decide on 3.
+    opinion = json.dumps({"answers": [{"question": 1, "answer": 1}, {"question": 2, "answer": 3}, {"question": 3, "answer": 0}]})
+    refill = batch(q(4), q(5))
+    opinion_two = json.dumps({"answers": [{"question": 1, "answer": 1}, {"question": 2, "answer": 1}]})
+    fake = FakeChat([TEXT, batch(q(1), q(2), q(3)), opinion, refill, opinion_two])
+    use(fake)
+    sid = start(client, question_count=3, question_style="tricky").json()["session_id"]
+    made = client.post(f"/api/reading/sessions/{sid}/questions").json()
+    assert [item["question"] for item in made["questions"]] == ["Question 1?", "Question 4?", "Question 5?"]
+
+    check = fake.calls[2]
+    assert "careful reader" in check[0]["content"]
+    asked = check[1]["content"]
+    assert "Question 2: Question 2?" in asked and "  1. right 2" in asked and "The bridge was built" in asked
+    assert "Because of line" not in asked and '"answer": 1, "explanation"' not in asked  # the key is not shown
+    assert "Write 2 multiple-choice" in fake.calls[3][1]["content"]  # only the rejected ones are replaced
+
+
+def test_second_opinion_is_skipped_when_it_fails_and_for_straightforward_questions(client):
+    fake = FakeChat([TEXT, batch(q(1)), ProviderError("model offline")])
+    use(fake)
+    sid = start(client, question_count=1, question_style="tricky").json()["session_id"]
+    assert len(client.post(f"/api/reading/sessions/{sid}/questions").json()["questions"]) == 1
+
+    fake = FakeChat([TEXT, batch(q(1))])
+    use(fake)
+    sid = start(client, question_count=1).json()["session_id"]
+    client.post(f"/api/reading/sessions/{sid}/questions")
+    assert len(fake.calls) == 2  # straightforward: no checking call

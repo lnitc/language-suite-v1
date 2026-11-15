@@ -18,6 +18,7 @@ from pydantic import BaseModel, Field, StringConstraints
 
 from ..providers.base import ChatProvider, ProviderError, TextToSpeech
 from ..providers.factory import get_chat_provider, get_speech_provider
+from ..context import feedback_language
 from ..textutils import compare, parse_json, split_by_sentence
 from .handwriting import HandwritingRequest, transcribe_handwriting
 from .speech import clean_language_code
@@ -157,7 +158,7 @@ async def _teacher_feedback(
                 "directly: first the patterns behind the mistakes (for example "
                 "spelling, word endings, sounds that were misheard, missing "
                 "words), then two or three concrete tips. Plain text without "
-                "markdown, at most 150 words. Write in English unless the system "
+                "markdown, at most 150 words. Write in " + feedback_language() + " unless the system "
                 "prompt asks for another language."
             ),
         },

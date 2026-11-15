@@ -27,6 +27,7 @@ from pydantic import BaseModel, Field, StringConstraints
 
 from ..providers.base import ChatProvider, ProviderError
 from ..providers.factory import get_chat_provider
+from ..context import feedback_language
 from ..textutils import normalize, parse_json
 from .dictation import DIFFICULTIES
 from .speech import clean_language_code
@@ -417,7 +418,7 @@ async def submit(
                 '"comment" is one to three sentences on meaning errors, '
                 'omissions, additions and language mistakes, or praise if it was good. '
                 '"overall" is a short summary with two or three tips. Write comments and '
-                "the summary in English unless the system prompt asks for another language."
+                "the summary in " + feedback_language() + " unless the system prompt asks for another language."
             ),
         },
     ]

@@ -137,6 +137,47 @@ python -m uvicorn app.main:app --port 8000
 Open <http://localhost:8000> in your browser. Press `Ctrl+C` in PowerShell to
 stop the app. It only listens on your own computer, not on the network.
 
+## Settings
+
+The **Settings** button at the top opens a small panel where you set, once:
+
+| Setting | Used for |
+|---|---|
+| Language I am learning | Fills in the language field of every feature |
+| My language | The translation side of vocabulary, word lists, interpreting and translation |
+| My level | Preselects the difficulty everywhere |
+| Feedback and explanations in | The language of the teacher's feedback in every feature. If empty, your own language is used, and English if that is empty too |
+
+The settings fill in the forms; you can still change any field for a single
+session. They are stored in your browser only.
+
+## Context window
+
+A model can only hold a limited amount of text at once: its context window,
+counted in tokens (a token is roughly three quarters of an English word, or
+about one Japanese character). Everything has to fit: the instructions, your
+text, and the answer.
+
+**Ollama does not report an error when a request is too long. It silently
+drops part of it**, and the symptom is feedback that ignores the end of your
+essay, or questions about only half of a text. On most home computers (less
+than 24 GB of graphics memory) Ollama's default window is 4,096 tokens, which
+a long essay, a translation or a long reading text with many questions can
+exceed, especially in Japanese or Chinese.
+
+The app estimates the size of every request and shows a note when it
+probably does not fit. To raise the limit with Ollama on Windows:
+
+1. In PowerShell, run `setx OLLAMA_CONTEXT_LENGTH 8192`
+2. Quit Ollama (right-click its icon near the clock, Quit) and start it again.
+3. In your `.env` file, set `LLM_CONTEXT_TOKENS=8192` and restart the app.
+
+Run `ollama ps` while a model is loaded to see the window it is using. A
+larger window needs more memory; if the model becomes much slower, it no
+longer fits in your graphics memory, so choose a smaller number or shorter
+texts. With a cloud service, set `LLM_CONTEXT_TOKENS` to the limit of your
+model, or to `0` to switch the check off.
+
 ## Interpreter simulation
 
 Practise consecutive interpreting by voice. Choose the number of speakers:
@@ -234,6 +275,11 @@ each with four options, like the reading part of a language proficiency exam.
 3. Choose your answers and submit. You get your score, the correct answers
    with the reason for each, and, for your wrong answers, why the option
    you chose is wrong. The result can be downloaded.
+
+Tricky questions get a second opinion: the model answers each one from the
+text without being told the intended answer, and a question is kept only if
+it finds the same answer again. This removes most ambiguous questions, at
+the cost of one extra model call per batch.
 
 The answers are marked by the app itself, not by the model, and the options
 are shuffled. A small local model can still occasionally write a question
@@ -389,6 +435,12 @@ STT_API_KEY=<your own key, or empty for a local server>
   browsers only allow the microphone on `localhost` or secure sites.
 - The first time, the browser asks for permission to use the microphone.
 - Press the microphone button, speak, and press it again when you finish.
+- In Conversation and Job interview you can tick **Hands-free** instead: the
+  app starts listening when the other person has finished speaking, and
+  stops by itself when you pause for two seconds. Leave it unticked if you
+  like to pause and think; then nothing is sent until you press the button.
+- In those two features the reply is spoken sentence by sentence while the
+  model is still writing it, so you do not wait for the whole answer.
 
 Good to know: speech recognition writes down what it believes you meant. It
 cannot judge pronunciation, and it sometimes tidies up small slips, so the
@@ -421,6 +473,7 @@ feedback is about words, grammar and content.
 app/
   main.py            entry point, serves the API and the browser UI
   config.py          settings from environment variables / .env
+  context.py         per-request preferences (feedback language) and notes for the learner
   providers/
     base.py          the three interfaces: ChatProvider, SpeechToText, TextToSpeech
     openai_compatible.py   brain, ear and mouth for Ollama and OpenAI-style APIs

@@ -7,6 +7,8 @@ learner, the ear turns it into text, and this module produces each reply.
 
 from __future__ import annotations
 
+import json
+import logging
 import re
 import uuid
 from collections import OrderedDict
@@ -14,15 +16,18 @@ from dataclasses import dataclass, field
 from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
 from ..providers.base import ChatProvider, ProviderError
 from ..providers.factory import get_chat_provider
+from ..context import current_warnings, feedback_language
 from ..textutils import parse_json
 from .dictation import DIFFICULTIES
 from .speech import clean_language_code
 
 router = APIRouter(prefix="/api/talk", tags=["talk"])
+logger = logging.getLogger("uvicorn.error")
 
 MAX_SESSIONS = 50
 MAX_MATERIAL_CHARS = 8000
@@ -203,16 +208,9 @@ async def start_session(
     }
 
 
-@router.post("/sessions/{session_id}/turns")
-async def take_turn(
-    session_id: str, req: TurnRequest, chat: ChatProvider = Depends(get_chat_provider)
-) -> dict:
-    session = _get_session(session_id)
-    if session.done:
-        raise HTTPException(409, "This session is finished. Ask for the feedback.")
-    text = " ".join(req.text.split())
+def _prepare_turn(session: Session, text: str) -> tuple[list[dict], bool, int]:
+    """The messages for the model, whether this turn ends the session, and its number."""
     turn = session.learner_turns + 1
-
     # A stage direction for this call only; the history keeps the clean text.
     note, finishing = "", False
     if session.kind == "interview":
@@ -230,13 +228,12 @@ async def take_turn(
     elif turn >= MAX_LEARNER_TURNS:
         finishing = True
         note = "[To the teacher: time is up. Say a short, friendly goodbye.]"
-
     call = session.history + [{"role": "user", "content": f"{text}\n\n{note}" if note else text}]
-    reply = clean_spoken(await chat.chat(call, temperature=0.7))
-    if not reply:
-        raise ProviderError("The model gave an empty reply. Please try that turn again.")
+    return call, finishing, turn
 
-    # Saved only after success, so a failed turn can simply be repeated.
+
+def _commit_turn(session: Session, text: str, reply: str, turn: int, finishing: bool) -> None:
+    """Saved only after success, so a failed turn can simply be repeated."""
     roles = ROLES[session.kind]
     session.history += [
         {"role": "user", "content": text},
@@ -248,7 +245,86 @@ async def take_turn(
     ]
     session.learner_turns = turn
     session.done = finishing
+
+
+@router.post("/sessions/{session_id}/turns")
+async def take_turn(
+    session_id: str, req: TurnRequest, chat: ChatProvider = Depends(get_chat_provider)
+) -> dict:
+    session = _get_session(session_id)
+    if session.done:
+        raise HTTPException(409, "This session is finished. Ask for the feedback.")
+    text = " ".join(req.text.split())
+    call, finishing, turn = _prepare_turn(session, text)
+    reply = clean_spoken(await chat.chat(call, temperature=0.7))
+    if not reply:
+        raise ProviderError("The model gave an empty reply. Please try that turn again.")
+    _commit_turn(session, text, reply, turn, finishing)
     return {"reply": reply, "done": session.done, "turn": turn}
+
+
+# Where a spoken sentence ends: after . ! ? … followed by a space, or right
+# after the full-width 。！？ of Japanese and Chinese (unless a closing quote follows).
+_SENTENCE_END = re.compile(r"(?<=[.!?…])\s+|(?<=[。！？])(?![」』）。！？])")
+
+
+def split_sentences(buffer: str) -> tuple[list[str], str]:
+    """Complete sentences in the buffer, and the unfinished rest."""
+    pieces = _SENTENCE_END.split(buffer)
+    return [piece for piece in pieces[:-1] if piece.strip()], pieces[-1]
+
+
+async def _reply_pieces(chat: ChatProvider, call: list[dict]):
+    """The reply as it is written, if the provider can stream; otherwise all at once."""
+    if hasattr(chat, "chat_stream"):
+        async for piece in chat.chat_stream(call, temperature=0.7):
+            yield piece
+    else:
+        yield await chat.chat(call, temperature=0.7)
+
+
+@router.post("/sessions/{session_id}/turns/stream")
+async def take_turn_stream(
+    session_id: str, req: TurnRequest, chat: ChatProvider = Depends(get_chat_provider)
+) -> StreamingResponse:
+    """Like take_turn, but sends each sentence as soon as the model has
+    written it, so the voice can start before the whole reply is ready.
+
+    The response is one JSON object per line: {"sentence": "..."} for each
+    sentence, then {"done": ..., "turn": ..., "reply": "..."} at the end, or
+    {"error": "..."} if the turn failed (it is then not saved).
+    """
+    session = _get_session(session_id)
+    if session.done:
+        raise HTTPException(409, "This session is finished. Ask for the feedback.")
+    text = " ".join(req.text.split())
+    call, finishing, turn = _prepare_turn(session, text)
+
+    def line(data: dict) -> str:
+        return json.dumps(data, ensure_ascii=False) + "\n"
+
+    async def lines():
+        whole, buffer = "", ""
+        try:
+            async for piece in _reply_pieces(chat, call):
+                whole += piece
+                buffer += piece
+                sentences, buffer = split_sentences(buffer)
+                for sentence in sentences:
+                    if spoken := clean_spoken(sentence):
+                        yield line({"sentence": spoken})
+            if spoken := clean_spoken(buffer):
+                yield line({"sentence": spoken})
+            reply = clean_spoken(whole)
+            if not reply:
+                raise ProviderError("The model gave an empty reply. Please try that turn again.")
+            _commit_turn(session, text, reply, turn, finishing)
+            yield line({"done": session.done, "turn": turn, "reply": reply, "warning": next(iter(current_warnings()), "")})
+        except ProviderError as error:
+            logger.error("%s", error, exc_info=error.__cause__ or error)
+            yield line({"error": str(error)})
+
+    return StreamingResponse(lines(), media_type="application/x-ndjson", headers={"Cache-Control": "no-store"})
 
 
 def _feedback_request(session: Session) -> str:
@@ -293,7 +369,7 @@ async def finish(
                         "comment on pronunciation, punctuation or capital letters, and "
                         "keep in mind that an odd word may be a recognition error. "
                         "Plain text with short headings and line breaks, no markdown "
-                        "symbols, at most 300 words. Write in English unless the system "
+                        "symbols, at most 300 words. Write in " + feedback_language() + " unless the system "
                         "prompt asks for another language.\n\n--- transcript ---\n"
                         + lines
                     ),

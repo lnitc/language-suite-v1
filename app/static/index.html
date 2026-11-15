@@ -9,9 +9,48 @@
 </head>
 <body>
   <header>
-    <h1>Language Suite</h1>
+    <div class="title-row">
+      <h1>Language Suite</h1>
+      <button type="button" id="settings-open" aria-expanded="false">⚙ Settings</button>
+    </div>
     <p id="model-info" class="muted"></p>
   </header>
+
+  <section id="settings-panel" hidden>
+    <h2>Settings</h2>
+    <p class="muted">Set these once. They fill in the forms of every feature, and you can still
+      change any field for a single session. They are kept in this browser only.</p>
+    <form id="settings-form">
+      <div class="row">
+        <label>Language I am learning
+          <input id="set-learning" maxlength="40" placeholder="e.g. Japanese">
+        </label>
+        <label>My language <span class="muted">(for translations)</span>
+          <input id="set-native" maxlength="40" placeholder="e.g. English">
+        </label>
+      </div>
+      <div class="row">
+        <label>My level
+          <select id="set-level">
+            <option value="">No preset</option>
+            <option value="beginner">Beginner (A1)</option>
+            <option value="elementary">Elementary (A2)</option>
+            <option value="intermediate">Intermediate (B1)</option>
+            <option value="upper_intermediate">Upper-intermediate (B2)</option>
+            <option value="advanced">Advanced (C1)</option>
+          </select>
+        </label>
+        <label>Feedback and explanations in
+          <input id="set-feedback" maxlength="40" placeholder="My language, or English if that is empty">
+        </label>
+      </div>
+      <div class="player">
+        <button type="submit" class="primary">Save settings</button>
+        <button type="button" id="settings-close">Close</button>
+        <span id="settings-saved" class="muted" hidden>Saved.</span>
+      </div>
+    </form>
+  </section>
 
   <nav id="section-nav" aria-label="Sections">
     <button class="section-tab active" data-section="speaking">Speaking</button>
@@ -34,6 +73,8 @@
 
   <main>
     <p id="error" class="error" role="alert" hidden></p>
+    <p id="warning" class="note" role="status" hidden><span id="warning-text"></span>
+      <button type="button" id="warning-close" aria-label="Hide this note">×</button></p>
 
     <!-- ================= Vocabulary ================= -->
     <div class="feature" id="feature-vocabulary" hidden>
@@ -155,6 +196,8 @@
             <select id="talk-voice"></select>
           </label>
         </div>
+        <label class="inline"><input type="checkbox" id="talk-handsfree"> Hands-free: listen
+          automatically after the other person speaks, and stop when I pause for two seconds</label>
         <label class="inline"><input type="checkbox" id="talk-show-text"> Show the conversation as text</label>
         <div id="talk-transcript" class="transcript" hidden></div>
         <button type="button" id="talk-end">End session and get feedback</button>

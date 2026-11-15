@@ -6,9 +6,47 @@ services, by changing only the base URL, model name and key.
 
 from __future__ import annotations
 
+import json
+from collections.abc import AsyncIterator
+
 import httpx
 
+from ..context import add_warning
 from .base import Message, ProviderError
+
+# Room kept free for the model's answer when judging whether a request fits.
+ANSWER_RESERVE_TOKENS = 800
+
+
+def estimate_tokens(messages: list[Message]) -> int:
+    """A rough count of the tokens in a request. Exact counts depend on the
+    model; this errs on the high side. Letters of alphabets come to about
+    3.5 characters per token; kanji, kana and similar to about one each."""
+    total = 0.0
+    for message in messages:
+        content = message["content"]
+        parts = content if isinstance(content, list) else [{"type": "text", "text": content}]
+        for part in parts:
+            if part.get("type") == "image_url":
+                total += 300
+                continue
+            text = str(part.get("text") or "")
+            wide = sum(1 for char in text if ord(char) > 0x2E7F)
+            total += wide * 1.1 + (len(text) - wide) / 3.5
+        total += 4
+    return int(total)
+
+
+def _check_status(status: int, what: str, model: str) -> None:
+    if status == 401:
+        raise ProviderError(f"The {what} server rejected the API key.")
+    if status == 404:
+        raise ProviderError(
+            f"Model '{model}' was not found on the {what} server. "
+            f"With Ollama, run: ollama pull {model}"
+        )
+    if status >= 400:
+        raise ProviderError(f"The {what} server returned an error (HTTP {status}).")
 
 
 async def _post(
@@ -49,17 +87,7 @@ async def _post(
     except httpx.HTTPError as exc:
         raise ProviderError(f"The request to the {what} server failed.") from exc
 
-    if response.status_code == 401:
-        raise ProviderError(f"The {what} server rejected the API key.")
-    if response.status_code == 404:
-        raise ProviderError(
-            f"Model '{model}' was not found on the {what} server. "
-            f"With Ollama, run: ollama pull {model}"
-        )
-    if response.status_code >= 400:
-        raise ProviderError(
-            f"The {what} server returned an error (HTTP {response.status_code})."
-        )
+    _check_status(response.status_code, what, model)
     return response
 
 
@@ -73,13 +101,68 @@ class OpenAICompatibleChat:
         model: str,
         api_key: str = "",
         timeout: float = 120.0,
+        context_tokens: int = 0,
         transport: httpx.AsyncBaseTransport | None = None,
     ) -> None:
         self._base_url = base_url.rstrip("/")
         self._model = model
         self._api_key = api_key
         self._timeout = timeout
+        self._context_tokens = context_tokens  # 0: unknown, no check
         self._transport = transport
+
+    def _check_size(self, messages: list[Message]) -> None:
+        """Local servers such as Ollama silently cut off a request that does
+        not fit the model's context window. The app cannot prevent that, but
+        it can tell the learner when it is likely."""
+        if not self._context_tokens:
+            return
+        needed = estimate_tokens(messages)
+        if needed + ANSWER_RESERVE_TOKENS > self._context_tokens:
+            add_warning(
+                f"This request is large for the model's working memory: about {needed} "
+                f"tokens plus the answer, and the limit is set to {self._context_tokens}. "
+                "The model may ignore part of the text, so check the result with care. "
+                'See "Context window" in the README for how to raise the limit.'
+            )
+
+    async def chat_stream(
+        self, messages: list[Message], *, temperature: float = 0.7
+    ) -> AsyncIterator[str]:
+        """Like chat(), but yields the reply piece by piece as it is written."""
+        self._check_size(messages)
+        payload = {"model": self._model, "messages": messages, "temperature": temperature, "stream": True}
+        headers = {"Authorization": f"Bearer {self._api_key}"} if self._api_key else {}
+        try:
+            async with httpx.AsyncClient(timeout=self._timeout, transport=self._transport) as client:
+                async with client.stream(
+                    "POST", f"{self._base_url}/chat/completions", json=payload, headers=headers
+                ) as response:
+                    _check_status(response.status_code, "model", self._model)
+                    async for line in response.aiter_lines():
+                        if not line.startswith("data:"):
+                            continue
+                        data = line[5:].strip()
+                        if data == "[DONE]":
+                            break
+                        try:
+                            piece = json.loads(data)["choices"][0]["delta"].get("content") or ""
+                        except (ValueError, KeyError, IndexError, TypeError, AttributeError):
+                            continue
+                        if piece:
+                            yield piece
+        except httpx.ConnectError as exc:
+            raise ProviderError(
+                f"Could not reach the model server at {self._base_url}. "
+                "If it is a local server such as Ollama, check that it is running."
+            ) from exc
+        except httpx.TimeoutException as exc:
+            raise ProviderError(
+                "The model server took too long to answer. Try again, use a "
+                "smaller model, or raise the timeout in your .env file."
+            ) from exc
+        except httpx.HTTPError as exc:
+            raise ProviderError("The request to the model server failed.") from exc
 
     async def chat(
         self,
@@ -96,6 +179,7 @@ class OpenAICompatibleChat:
         }
         if json_mode:
             payload["response_format"] = {"type": "json_object"}
+        self._check_size(messages)
 
         response = await _post(
             base_url=self._base_url,

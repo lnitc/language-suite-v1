@@ -190,3 +190,12 @@ fieldset.question input { width: auto; margin-top: 0.3rem; }
 #tr-submit:disabled::before { display: none; }
 .correction .from { font-weight: 600; }
 .correction .missing { color: var(--bad); font-style: italic; }
+
+/* ---------- Settings and notes ---------- */
+.title-row { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+#settings-open { padding: 0.35rem 0.8rem; font-size: 0.9rem; }
+#settings-panel { margin-bottom: 1rem; }
+#warning { display: flex; align-items: flex-start; justify-content: space-between; gap: 0.75rem; margin: 0 0 1rem; }
+#warning[hidden] { display: none; }
+#warning-close { padding: 0 0.5rem; border: none; background: transparent; color: inherit; font-size: 1.2rem; line-height: 1.2; }
+#talk-live label.inline { margin-top: 0.35rem; }

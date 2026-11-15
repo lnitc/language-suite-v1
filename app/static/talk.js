@@ -59,6 +59,7 @@
       select.appendChild(option);
     }
     select.value = config.preset;
+    delete select.dataset.auto; // rebuilt: the saved level may be applied again (conversation only)
     $("talk-system-prompt").placeholder = config.systemHint;
     $("talk-session-prompt").placeholder = config.sessionHint;
     $("talk-material-hint").textContent = config.materialHint;
@@ -67,6 +68,7 @@
   }
 
   function leaveSession() {
+    speechRun += 1;
     voice.stop();
     mic.reset();
     sessionId = null;
@@ -88,7 +90,36 @@
     return `Question ${Math.min(turn + 1, questionCount)} of ${questionCount}. `;
   }
 
+  // Hands-free is a choice (off unless ticked), remembered in this browser.
+  const handsFree = () => $("talk-handsfree").checked;
+  try { $("talk-handsfree").checked = localStorage.getItem("talk-handsfree") === "1"; } catch { /* optional */ }
+  $("talk-handsfree").addEventListener("change", () => {
+    try { localStorage.setItem("talk-handsfree", handsFree() ? "1" : "0"); } catch { /* optional */ }
+    if (handsFree() && sessionId && !done && !$("talk-mic").disabled) mic.start();
+  });
+
+  let speechRun = 0; // raised to cancel sentences that are still waiting to be spoken
+
+  // What happens when the partner has finished speaking.
+  function afterSpeaking() {
+    if (!sessionId) return;
+    if (done) {
+      status("The session is over. Press the button below for your feedback.");
+      $("talk-end").textContent = "Show feedback";
+      $("talk-end").classList.add("primary");
+      return;
+    }
+    mic.setEnabled(true);
+    if (handsFree() && !$("feature-talk").hidden) { // not while another feature is open
+      status(`${progress()}Listening: speak when you are ready. I stop when you pause for two seconds.`);
+      mic.start();
+    } else {
+      status(`${progress()}Your turn: press the microphone, speak, then press it again.`);
+    }
+  }
+
   async function say(text) {
+    const run = ++speechRun;
     lastReply = text;
     mic.setEnabled(false);
     status(`${progress()}The ${KINDS[kind].partner} is speaking…`);
@@ -97,32 +128,76 @@
     } catch (error) {
       showError(error.message);
     }
-    if (!sessionId) return;
-    if (done) {
-      status("The session is over. Press the button below for your feedback.");
-      $("talk-end").textContent = "Show feedback";
-      $("talk-end").classList.add("primary");
-    } else {
-      mic.setEnabled(true);
-      status(`${progress()}Your turn: press the microphone, speak, then press it again.`);
+    if (run === speechRun) afterSpeaking();
+  }
+
+  // Sends the learner's words and speaks the reply sentence by sentence as
+  // the model writes it, instead of waiting for the whole reply.
+  async function streamTurn(text) {
+    const run = ++speechRun;
+    const response = await request(`/api/talk/sessions/${sessionId}/turns/stream`, {
+      method: "POST",
+      body: JSON.stringify({ text }),
+    });
+    let speaking = Promise.resolve();
+    let final = null;
+
+    const handle = (data) => {
+      if (data.error) throw new Error(data.error);
+      if (data.sentence) {
+        speaking = speaking.then(() => {
+          if (run !== speechRun) return null; // cancelled meanwhile
+          status(`${progress()}The ${KINDS[kind].partner} is speaking…`);
+          return voice
+            .speak(data.sentence, languageCode, Number($("talk-speed").value))
+            .catch((error) => showError(error.message));
+        });
+      } else if ("done" in data) {
+        final = data;
+      }
+    };
+
+    try {
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      for (;;) {
+        const { value, done: finished } = await reader.read();
+        if (finished) break;
+        buffer += decoder.decode(value, { stream: true });
+        let end;
+        while ((end = buffer.indexOf("\n")) >= 0) {
+          const line = buffer.slice(0, end).trim();
+          buffer = buffer.slice(end + 1);
+          if (line) handle(JSON.parse(line));
+        }
+      }
+      if (buffer.trim()) handle(JSON.parse(buffer));
+      if (!final) throw new Error("The reply was cut off. Please say that again.");
+    } catch (error) {
+      speechRun += 1; // drop what was still waiting to be spoken
+      voice.stop();
+      throw error;
     }
+
+    done = final.done;
+    turn = final.turn;
+    lastReply = final.reply;
+    addLine(KINDS[kind].label, final.reply);
+    if (final.warning) showWarning(final.warning);
+    speaking.then(() => { if (run === speechRun) afterSpeaking(); }); // not awaited
   }
 
   const mic = voice.attachMic($("talk-mic"), {
     language: () => languageCode,
+    handsFree,
+    onNothingHeard: () => status("I did not hear anything. Press the microphone when you are ready."),
     onText: async (text) => {
       addLine("You", text);
       mic.setEnabled(false);
       status(`The ${KINDS[kind].partner} is thinking…`);
       try {
-        const result = await api(`/api/talk/sessions/${sessionId}/turns`, {
-          method: "POST",
-          body: JSON.stringify({ text }),
-        });
-        done = result.done;
-        turn = result.turn;
-        addLine(KINDS[kind].label, result.reply);
-        say(result.reply); // not awaited: the microphone button returns to normal meanwhile
+        await streamTurn(text);
       } catch (error) {
         $("talk-transcript").lastChild.remove(); // that turn did not count
         mic.setEnabled(true);
@@ -177,8 +252,10 @@
     }
   });
 
-  $("talk-repeat").addEventListener("click", () => {
-    if (lastReply) say(lastReply);
+  $("talk-repeat").addEventListener("click", async () => {
+    if (!lastReply) return;
+    await mic.reset(); // in hands-free mode the microphone may already be listening
+    say(lastReply);
   });
 
   $("talk-show-text").addEventListener("change", (event) => {
@@ -187,6 +264,7 @@
 
   $("talk-end").addEventListener("click", async () => {
     showError("");
+    speechRun += 1; // nothing more is spoken, and the microphone stays off
     voice.stop();
     await mic.reset();
     mic.setEnabled(false);

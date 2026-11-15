@@ -21,6 +21,7 @@ from pydantic import BaseModel, Field
 
 from ..providers.base import ChatProvider, ProviderError
 from ..providers.factory import get_chat_provider
+from ..context import feedback_language
 from ..textutils import parse_json
 from .dictation import DIFFICULTIES
 from .handwriting import HandwritingRequest, transcribe_handwriting
@@ -183,7 +184,7 @@ async def _review(session: Session, essay: str, chat: ChatProvider) -> dict:
                 'phrase from the essay, "corrected" is the fixed version, "explanation" is '
                 "one short sentence. If something in the essay is marked [?], it could not "
                 "be read from handwriting: do not treat it as a mistake.\n\n"
-                "Write comments, feedback and explanations in English unless the system "
+                "Write comments, feedback and explanations in " + feedback_language() + " unless the system "
                 f"prompt asks for another language; quote and correct in {session.language}.\n\n"
                 f'Reply with JSON only: {{"scores": {{{shape}}}, "feedback": "...", '
                 '"corrections": [{"original": "...", "corrected": "...", "explanation": "..."}]}'
