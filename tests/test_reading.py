@@ -149,3 +149,24 @@ def test_no_questions_can_be_retried_and_missing_explanations_do_not_matter(clie
     result = client.post(f"{url}/submit", json={"answers": [5]}).json()  # 5 is not an option: unanswered
     assert (result["score"], result["questions"][0]["chosen"]) == (0, None)
     assert len(fake.calls) == 5  # nothing to explain, so no further model call
+
+
+def test_question_style_changes_the_instructions(client):
+    fake = FakeChat([TEXT, batch(q(1)), TEXT, batch(q(1))])
+    use(fake)
+    plain = start(client, question_count=1).json()["session_id"]
+    client.post(f"/api/reading/sessions/{plain}/questions")
+    tricky = start(client, question_count=1, question_style="tricky").json()["session_id"]
+    client.post(f"/api/reading/sessions/{tricky}/questions")
+
+    plain_prompt, tricky_prompt = fake.calls[1][1]["content"], fake.calls[3][1]["content"]
+    assert "Question style: straightforward" in plain_prompt and "must NOT repeat" not in plain_prompt
+    assert "Question style: tricky" in tricky_prompt
+    assert "must NOT repeat the wording of the text" in tricky_prompt
+    assert "reuse words and phrases straight from the text" in tricky_prompt
+    # The text itself is written the same way for both.
+    assert fake.calls[0][1]["content"] == fake.calls[2][1]["content"]
+
+    result = client.post(f"/api/reading/sessions/{tricky}/submit", json={"answers": [None]}).json()
+    assert result["question_style"] == "tricky"
+    assert start(client, question_style="impossible").status_code == 422

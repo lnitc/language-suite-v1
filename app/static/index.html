@@ -479,6 +479,12 @@
               <input id="read-count" type="number" min="1" max="10" value="5" required>
             </label>
           </div>
+          <label>Question difficulty
+            <select id="read-style">
+              <option value="straightforward" selected>Straightforward: answers can be found in the text's own words</option>
+              <option value="tricky">Tricky: answers are rephrased, and wrong options borrow the text's words</option>
+            </select>
+          </label>
           <label>System prompt <span class="muted">(optional: who the teacher is, language of the explanations)</span>
             <textarea id="read-system-prompt" rows="2" maxlength="2000"
               placeholder="You are an experienced language teacher."></textarea>

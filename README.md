@@ -182,7 +182,11 @@ needs a chat model that can read images.
 The teacher writes a text and up to ten multiple-choice questions about it,
 each with four options, like the reading part of a language proficiency exam.
 
-1. Choose the language, difficulty, text length and number of questions.
+1. Choose the language, difficulty, text length, number of questions and
+   question difficulty. **Straightforward** questions can be answered by
+   finding the right sentence. **Tricky** questions rephrase the correct
+   answer with other words, while the wrong options borrow the text's own
+   wording, so matching words is not enough.
    "Long" is about one A4 page (around 500 words, or 1,000 characters for
    languages such as Japanese and Chinese).
 2. The text appears first, so you can start reading while the questions

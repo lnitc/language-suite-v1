@@ -40,6 +40,29 @@ QUESTIONS_PER_CALL = 5
 # Target length: words, or characters for languages written without spaces.
 # "long" is about one A4 page, like a long passage in a proficiency exam.
 LENGTHS = {"short": (150, 300), "medium": (300, 600), "long": (500, 1000)}
+# How hard the questions are to answer (separate from how hard the text is).
+QUESTION_STYLES = {
+    "straightforward": (
+        "Question style: straightforward. The correct option may use the same words as "
+        "the text, so that a learner who finds the right sentence can answer."
+    ),
+    "tricky": (
+        "Question style: tricky, as in the hardest part of a proficiency exam. Finding "
+        "matching words must not be enough to answer:\n"
+        "- The correct option must NOT repeat the wording of the text. Say the same "
+        "thing differently: synonyms, another grammatical structure, a summary, a "
+        "more general or more specific statement, or the idea seen from the other side.\n"
+        "- The wrong options SHOULD reuse words and phrases straight from the text, but "
+        "say something the text does not say: a changed detail, cause and effect "
+        "reversed, the wrong person or time, an exaggeration (always, never, only), "
+        "or something true in the text that does not answer the question.\n"
+        "- Include questions whose answer is implied by the text and has to be worked "
+        "out, not read off.\n"
+        "- Make the four options similar in length and tone.\n"
+        "- Even so, exactly one option must be clearly right for a careful reader, and "
+        "the explanation must show which part of the text proves it."
+    ),
+}
 _OPTION_LABEL = re.compile(r"^\s*(?:[A-Da-d1-4][.)：:、]|[(（][A-Da-d1-4][)）])\s*")
 _rng = random.Random()
 
@@ -58,6 +81,7 @@ class Session:
     difficulty: str
     system_prompt: str
     question_count: int
+    question_style: str
     title: str
     text: str
     questions: list[Question] = field(default_factory=list)
@@ -74,6 +98,7 @@ class StartRequest(BaseModel):
     ] = "intermediate"
     length: Literal["short", "medium", "long"] = "long"
     question_count: int = Field(default=5, ge=1, le=MAX_QUESTIONS)
+    question_style: Literal["straightforward", "tricky"] = "straightforward"
     system_prompt: str = Field(default="", max_length=2000)
     session_prompt: str = Field(default="", max_length=2000)
 
@@ -147,6 +172,7 @@ async def start_session(
         difficulty=req.difficulty,
         system_prompt=req.system_prompt.strip(),
         question_count=req.question_count,
+        question_style=req.question_style,
         title=title,
         text=text,
     )
@@ -210,6 +236,7 @@ async def _write_questions(session: Session, count: int, chat: ChatProvider) -> 
         "- Vary the kind of question: main idea, a detail, a reason, what a word or "
         "phrase means in the text, what can be concluded.\n"
         "- Spread the questions over the whole text.",
+        QUESTION_STYLES[session.question_style],
     ]
     if session.questions:
         parts.append(
@@ -352,6 +379,7 @@ async def submit(
 
     session.result = {
         "language": session.language,
+        "question_style": session.question_style,
         "title": session.title,
         "text": session.text,
         "score": sum(row["is_correct"] for row in rows),
