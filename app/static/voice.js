@@ -225,16 +225,30 @@ const voice = (() => {
   // options.onText(text): what to do with the recognised words.
   // options.handsFree(): optional; true makes the recording stop by itself after a pause.
   // options.onNothingHeard(): optional; called when hands-free listening gave up.
+  // options.labels: optional; other words on the button for a long recording.
+  // options.maxMs(): optional; the recording is stopped by itself after this long.
+  // options.onState(state): optional; told when recording starts ("recording"),
+  //   when it is being written down ("busy") and when it is over ("idle").
+  // options.onRecording(blob): optional; receives the recording itself.
   function attachMic(button, options) {
     let state = "idle";
     let enabled = true;
     let stopWatching = null;
-    const labels = { idle: "🎤 Speak", recording: "■ Stop", busy: "Listening to your recording…" };
+    const labels = {
+      idle: "🎤 Speak", recording: "■ Stop", busy: "Listening to your recording…", ...(options.labels || {}),
+    };
+    let shown = null;
+    let limit = null;
 
     function render() {
       button.textContent = labels[state];
       button.classList.toggle("recording", state === "recording");
       button.disabled = state === "busy" || (!enabled && state === "idle");
+      if (state !== shown) {
+        shown = state;
+        if (state !== "recording") clearTimeout(limit);
+        if (options.onState) options.onState(state);
+      }
     }
 
     function endWatching() {
@@ -247,6 +261,9 @@ const voice = (() => {
       await startRecording();
       state = "recording";
       render();
+      if (options.maxMs) {
+        limit = setTimeout(() => { if (state === "recording") run(finish); }, options.maxMs());
+      }
       if (options.handsFree && options.handsFree()) {
         stopWatching = watchForSilence(
           () => { if (state === "recording") run(finish); },
@@ -259,7 +276,9 @@ const voice = (() => {
       endWatching();
       state = "busy";
       render();
-      const text = await transcribe(await stopRecording(), options.language());
+      const recording = await stopRecording();
+      if (options.onRecording) options.onRecording(recording);
+      const text = await transcribe(recording, options.language());
       if (text) await options.onText(text);
       else showError("No words were recognised. Please try again, a little closer to the microphone.");
     }

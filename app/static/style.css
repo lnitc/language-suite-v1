@@ -209,3 +209,12 @@ fieldset.question input { width: auto; margin-top: 0.3rem; }
 #shadow-attempt { margin: 0.5rem 0 0.75rem; }
 #shadow-attempt p { margin: 0.25rem 0; }
 #shadow-marked { font-size: 1.15rem; }
+
+/* ---------- Speech ---------- */
+.assignment-box { padding: 0.9rem 1rem; margin-bottom: 1.25rem; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); }
+.assignment-box h2 { font-size: 1rem; }
+button.mic.record { min-width: 13rem; padding: 0.8rem 1.2rem; font-size: 1.05rem; }
+.timer { font-size: 1.4rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.timer.over { color: var(--warn); }
+#sp-audio { width: 100%; }
+#sp-form { margin-top: 0.5rem; }

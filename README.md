@@ -7,7 +7,7 @@ The features are grouped into four sections:
 
 | Section | Features |
 |---|---|
-| Speaking | Conversation partner, job interview rehearsal, interpreter simulation, shadowing (all by voice) |
+| Speaking | Conversation partner, job interview rehearsal, interpreter simulation, speech (public speaking), shadowing (all by voice) |
 | Listening | Listening comprehension (a spoken text with multiple-choice questions) |
 | Vocabulary | Vocabulary practice (text or voice), vocabulary list creator (CSV and other formats) |
 | Writing | Dictation (typed or handwritten), essay writing and written translation (typed, uploaded or handwritten) |
@@ -272,6 +272,28 @@ and you answer multiple-choice questions about it.
 - The voice comes from your browser or your speech server (see "Voices"),
   so its quality depends on the voice you have for that language.
 
+## Speech (public speaking)
+
+Practise giving a short speech and get it reviewed, like an essay that you
+speak.
+
+1. Choose the language, difficulty and length (about 1, 2 or 3 minutes).
+   Start with **an assignment from the teacher** (topic, situation,
+   audience, points to cover), or with **your own topic**.
+2. Record your speech. A timer shows your time against the target, and the
+   recording stops by itself one minute after the target. You can record
+   again as often as you like.
+3. The app writes down what you said. Listen to your recording, correct
+   anything the app misheard, and send it.
+4. You get a rating on four criteria (content, structure, language, impact
+   on the audience), feedback, corrections, and a sample script of an ideal
+   speech, which you can also have read aloud. The result can be downloaded.
+
+The coach works from the written transcript and did not hear you, so it
+cannot judge pronunciation, voice or intonation. What the app measures
+itself is the length of your speech and your speaking pace; both are shown
+in the result and given to the coach for its comments.
+
 ## Shadowing (listen and repeat)
 
 You hear a sentence, say it yourself, and see which words the app's speech
@@ -522,6 +544,7 @@ app/
     essay.py         Feature 7 (essay writing)
     reading.py       Features 8 and 10 (reading and listening comprehension)
     shadowing.py     Feature 11 (shadowing: listen and repeat)
+    public_speaking.py   Feature 12 (speech: public speaking)
     translation.py   Feature 9 (written translation)
     handwriting.py   reads handwriting from photos (dictation and essay)
   textutils.py       shared text helpers (answer matching, dictation marking)

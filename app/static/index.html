@@ -64,6 +64,7 @@
     <button class="tab active" data-section="speaking" data-feature="talk" data-kind="conversation">Conversation</button>
     <button class="tab" data-section="speaking" data-feature="talk" data-kind="interview">Job interview</button>
     <button class="tab" data-section="speaking" data-feature="interpreter">Interpreter</button>
+    <button class="tab" data-section="speaking" data-feature="speech">Speech</button>
     <button class="tab" data-section="speaking" data-feature="shadowing">Shadowing</button>
     <button class="tab" data-section="listening" data-feature="listening" hidden>Listening comprehension</button>
     <button class="tab" data-section="vocabulary" data-feature="vocabulary" hidden>Vocabulary practice</button>
@@ -615,6 +616,118 @@
       </section>
     </div>
 
+    <!-- ================= Speech (public speaking) ================= -->
+    <div class="feature" id="feature-speech" hidden>
+      <section id="sp-setup">
+        <h2>Speech: public speaking practice</h2>
+        <form id="sp-setup-form">
+          <div class="row">
+            <label>Language
+              <input id="sp-language" required maxlength="60" placeholder="e.g. English">
+            </label>
+            <label>Difficulty
+              <select id="sp-difficulty">
+                <option value="beginner">Beginner (A1)</option>
+                <option value="elementary">Elementary (A2)</option>
+                <option value="intermediate" selected>Intermediate (B1)</option>
+                <option value="upper_intermediate">Upper-intermediate (B2)</option>
+                <option value="advanced">Advanced (C1)</option>
+              </select>
+            </label>
+          </div>
+          <div class="row">
+            <label>Start with
+              <select id="sp-mode">
+                <option value="assignment">An assignment from the teacher</option>
+                <option value="own">My own topic (no assignment)</option>
+              </select>
+            </label>
+            <label>Length of the speech
+              <select id="sp-minutes">
+                <option value="1">About 1 minute</option>
+                <option value="2" selected>About 2 minutes</option>
+                <option value="3">About 3 minutes</option>
+              </select>
+            </label>
+          </div>
+          <label>System prompt <span class="muted">(optional: who the coach is)</span>
+            <textarea id="sp-system-prompt" rows="2" maxlength="2000"
+              placeholder="You are an experienced, encouraging public speaking coach."></textarea>
+          </label>
+          <label>Session prompt <span class="muted" id="sp-session-hint"></span>
+            <textarea id="sp-session-prompt" rows="2" maxlength="2000"></textarea>
+          </label>
+          <button id="sp-start" type="submit" class="primary">Get an assignment</button>
+        </form>
+      </section>
+
+      <section id="sp-write" hidden>
+        <div id="sp-assignment-box" class="assignment-box" hidden>
+          <h2>Your assignment</h2>
+          <p id="sp-assignment" class="feedback"></p>
+          <button type="button" id="sp-another">↻ Another assignment</button>
+        </div>
+        <h2>Your speech</h2>
+        <p class="muted">Take a moment to plan: an opening, two or three points, a closing. Then record.
+          You can record again as often as you like; only the last recording counts.</p>
+        <div class="player">
+          <button type="button" id="sp-record" class="mic record"></button>
+          <span id="sp-timer" class="timer">0:00</span>
+        </div>
+        <p id="sp-status" class="status" aria-live="polite"></p>
+        <form id="sp-form" hidden>
+          <audio id="sp-audio" controls></audio>
+          <label>This is what the app heard
+            <textarea id="sp-transcript" rows="9" maxlength="18000" spellcheck="false"></textarea>
+          </label>
+          <p class="note">Listen to your recording and compare. Where the app misheard you, change the
+            text to what you really said, but leave your own mistakes as they are.</p>
+        </form>
+        <div class="row">
+          <button type="button" id="sp-back">← Back to the settings</button>
+          <button type="submit" form="sp-form" id="sp-submit" class="primary" hidden>Check my speech</button>
+        </div>
+      </section>
+
+      <section id="sp-results" hidden>
+        <h2>Your result</h2>
+        <p id="sp-rating" class="score"></p>
+        <p id="sp-timing" class="info"></p>
+        <table>
+          <thead><tr><th>Criterion</th><th>Rating</th><th>Comment</th></tr></thead>
+          <tbody id="sp-scores"></tbody>
+        </table>
+        <h3>Coach's feedback</h3>
+        <p id="sp-feedback" class="feedback"></p>
+        <h3 id="sp-corrections-title">Corrections</h3>
+        <div id="sp-corrections"></div>
+        <h3>Sample script of an ideal speech</h3>
+        <div class="player">
+          <button type="button" id="sp-listen">🔊 Listen to the sample</button>
+          <label class="inline">Speed
+            <select id="sp-speed">
+              <option value="0.8">Slow</option>
+              <option value="1" selected>Normal</option>
+              <option value="1.2">Fast</option>
+            </select>
+          </label>
+          <label class="inline" id="sp-voice-label" hidden>Voice
+            <select id="sp-voice"></select>
+          </label>
+        </div>
+        <p id="sp-sample" class="feedback ideal-text"></p>
+        <details>
+          <summary>Your speech as text</summary>
+          <p id="sp-own" class="feedback"></p>
+        </details>
+        <div class="player">
+          <button id="sp-restart" class="primary">New speech</button>
+          <button type="button" id="sp-again">● Record again and check</button>
+          <button type="button" id="sp-download">⬇ Download result</button>
+        </div>
+      </section>
+    </div>
+
     <!-- ================= Shadowing ================= -->
     <div class="feature" id="feature-shadowing" hidden>
       <section id="shadow-setup">
@@ -993,5 +1106,6 @@
   <script src="wordlist.js"></script>
   <script src="reading.js"></script>
   <script src="shadowing.js"></script>
+  <script src="speech.js"></script>
 </body>
 </html>
