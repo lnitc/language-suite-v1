@@ -54,6 +54,7 @@
 
   <nav id="section-nav" aria-label="Sections">
     <button class="section-tab active" data-section="speaking">Speaking</button>
+    <button class="section-tab" data-section="listening">Listening</button>
     <button class="section-tab" data-section="vocabulary">Vocabulary</button>
     <button class="section-tab" data-section="writing">Writing</button>
     <button class="section-tab" data-section="reading">Reading</button>
@@ -63,6 +64,8 @@
     <button class="tab active" data-section="speaking" data-feature="talk" data-kind="conversation">Conversation</button>
     <button class="tab" data-section="speaking" data-feature="talk" data-kind="interview">Job interview</button>
     <button class="tab" data-section="speaking" data-feature="interpreter">Interpreter</button>
+    <button class="tab" data-section="speaking" data-feature="shadowing">Shadowing</button>
+    <button class="tab" data-section="listening" data-feature="listening" hidden>Listening comprehension</button>
     <button class="tab" data-section="vocabulary" data-feature="vocabulary" hidden>Vocabulary practice</button>
     <button class="tab" data-section="vocabulary" data-feature="wordlist" hidden>Word list creator</button>
     <button class="tab" data-section="writing" data-feature="dictation" hidden>Dictation</button>
@@ -612,6 +615,199 @@
       </section>
     </div>
 
+    <!-- ================= Shadowing ================= -->
+    <div class="feature" id="feature-shadowing" hidden>
+      <section id="shadow-setup">
+        <h2>Shadowing: listen and repeat</h2>
+        <p class="muted">You hear a sentence, say it yourself, and see which words the app could
+          make out. Good for pronunciation, rhythm and speaking fluently.</p>
+        <form id="shadow-setup-form">
+          <div class="row">
+            <label>Language
+              <input id="shadow-language" required maxlength="60" placeholder="e.g. English">
+            </label>
+            <label>Difficulty
+              <select id="shadow-difficulty">
+                <option value="beginner">Beginner (A1)</option>
+                <option value="elementary">Elementary (A2)</option>
+                <option value="intermediate" selected>Intermediate (B1)</option>
+                <option value="upper_intermediate">Upper-intermediate (B2)</option>
+                <option value="advanced">Advanced (C1)</option>
+              </select>
+            </label>
+          </div>
+          <label>Number of sentences <span class="muted">(up to 10)</span>
+            <input id="shadow-count" type="number" min="1" max="10" value="5" required>
+          </label>
+          <label>System prompt <span class="muted">(optional: who the coach is)</span>
+            <textarea id="shadow-system-prompt" rows="2" maxlength="2000"
+              placeholder="You are a patient pronunciation and speaking coach."></textarea>
+          </label>
+          <label>Session prompt <span class="muted">(optional: topic, sounds to practise)</span>
+            <textarea id="shadow-session-prompt" rows="2" maxlength="2000"
+              placeholder="e.g. Sentences with many r and l sounds"></textarea>
+          </label>
+          <label>Your own text <span class="muted">(optional: sentences are taken from it; text, PDF or Word .docx)</span>
+            <input id="shadow-material" type="file" accept=".txt,.md,.csv,.pdf,.docx,.doc,text/plain,application/pdf">
+          </label>
+          <label class="inline"><input type="checkbox" id="shadow-hide">
+            Hide the sentence until I have tried it <span class="muted">(repeat from listening only)</span>
+          </label>
+          <button id="shadow-start" type="submit" class="primary">Start session</button>
+        </form>
+      </section>
+
+      <section id="shadow-live" hidden>
+        <p id="shadow-note" class="note" hidden></p>
+        <p id="shadow-progress" class="muted"></p>
+        <p id="shadow-text" class="shadow-sentence"></p>
+        <p id="shadow-status" class="status" aria-live="polite"></p>
+        <div class="player">
+          <button type="button" id="shadow-play" class="primary">▶ Play</button>
+          <button type="button" id="shadow-mic" class="mic"></button>
+          <label class="inline">Speed
+            <select id="shadow-speed">
+              <option value="0.7">Slow</option>
+              <option value="1" selected>Normal</option>
+              <option value="1.2">Fast</option>
+            </select>
+          </label>
+          <label class="inline" id="shadow-voice-label" hidden>Voice
+            <select id="shadow-voice"></select>
+          </label>
+        </div>
+        <div id="shadow-attempt" class="info" hidden>
+          <p id="shadow-score" class="status"></p>
+          <p id="shadow-marked"></p>
+          <p id="shadow-heard"></p>
+        </div>
+        <p class="muted">A <span class="miss">highlighted</span> word was not recognised: say it again, more
+          clearly or more slowly. Speech recognition guesses what you meant, so a recognised word
+          is a good sign, not proof of perfect pronunciation.</p>
+        <div class="row">
+          <button type="button" id="shadow-back">← Previous</button>
+          <button type="button" id="shadow-next" class="primary">Next sentence →</button>
+        </div>
+      </section>
+
+      <section id="shadow-results" hidden>
+        <h2>Your result</h2>
+        <p id="shadow-average" class="score"></p>
+        <h3 id="shadow-tips-title">Coach's tips</h3>
+        <p id="shadow-tips" class="feedback"></p>
+        <h3>Sentence by sentence</h3>
+        <table>
+          <thead><tr><th>#</th><th>Sentence</th><th>Tries</th><th>Best</th><th>Not recognised</th></tr></thead>
+          <tbody id="shadow-rows"></tbody>
+        </table>
+        <div class="player">
+          <button id="shadow-restart" class="primary">New session</button>
+          <button type="button" id="shadow-again">↻ Practise these sentences again</button>
+          <button type="button" id="shadow-download">⬇ Download result</button>
+        </div>
+      </section>
+    </div>
+
+    <!-- ================= Listening comprehension ================= -->
+    <div class="feature" id="feature-listening" hidden>
+      <section id="listen-setup">
+        <h2>Listening comprehension</h2>
+        <form id="listen-setup-form">
+          <div class="row">
+            <label>Language
+              <input id="listen-language" required maxlength="60" placeholder="e.g. Japanese">
+            </label>
+            <label>Difficulty
+              <select id="listen-difficulty">
+                <option value="beginner">Beginner (A1)</option>
+                <option value="elementary">Elementary (A2)</option>
+                <option value="intermediate" selected>Intermediate (B1)</option>
+                <option value="upper_intermediate">Upper-intermediate (B2)</option>
+                <option value="advanced">Advanced (C1)</option>
+              </select>
+            </label>
+          </div>
+          <div class="row">
+            <label>Text length
+              <select id="listen-length">
+                <option value="short">Short, about half a minute (60 words / 120 characters)</option>
+                <option value="medium" selected>Medium, about one minute (120 words / 250 characters)</option>
+                <option value="long">Long, about two minutes (220 words / 450 characters)</option>
+              </select>
+            </label>
+            <label>Number of questions <span class="muted">(up to 10)</span>
+              <input id="listen-count" type="number" min="1" max="10" value="5" required>
+            </label>
+          </div>
+          <label>Question difficulty
+            <select id="listen-style">
+              <option value="straightforward" selected>Straightforward: answers use the words you hear</option>
+              <option value="tricky">Tricky: answers are rephrased, and wrong options borrow words you hear</option>
+            </select>
+          </label>
+          <label>System prompt <span class="muted">(optional: who the teacher is, language of the explanations)</span>
+            <textarea id="listen-system-prompt" rows="2" maxlength="2000"
+              placeholder="You are an experienced language teacher."></textarea>
+          </label>
+          <label>Session prompt <span class="muted">(optional: topic, kind of text)</span>
+            <textarea id="listen-session-prompt" rows="2" maxlength="2000"
+              placeholder="e.g. A station announcement about a delayed train"></textarea>
+          </label>
+          <button id="listen-start" type="submit" class="primary">Create text and questions</button>
+        </form>
+      </section>
+
+      <section id="listen-work" hidden>
+        <div class="listen-player">
+          <h2 id="listen-title"></h2>
+          <div class="player">
+            <button type="button" id="listen-play" class="primary">▶ Play</button>
+            <label class="inline">Speed
+              <select id="listen-speed">
+                <option value="0.8">Slow</option>
+                <option value="1" selected>Normal</option>
+                <option value="1.2">Fast</option>
+              </select>
+            </label>
+            <label class="inline" id="listen-voice-label" hidden>Voice
+              <select id="listen-voice"></select>
+            </label>
+          </div>
+          <p id="listen-play-status" class="muted"></p>
+        </div>
+        <p id="listen-wait" class="status"><span class="spinner small"></span>
+          <span>The questions are being prepared. You can start listening.</span></p>
+        <button type="button" id="listen-retry" hidden>Try again to make the questions</button>
+        <p id="listen-note" class="note" hidden></p>
+        <form id="listen-form" hidden>
+          <h3>Questions</h3>
+          <div id="listen-questions"></div>
+          <p id="listen-unanswered" class="muted"></p>
+          <div class="row">
+            <button type="button" id="listen-back">← Back to the settings</button>
+            <button type="submit" class="primary">Check my answers</button>
+          </div>
+        </form>
+      </section>
+
+      <section id="listen-results" hidden>
+        <h2>Your result</h2>
+        <p id="listen-score" class="score"></p>
+        <details>
+          <summary>Read the text you heard</summary>
+          <article class="reading-text">
+            <h3 id="listen-result-title"></h3>
+            <div id="listen-result-text"></div>
+          </article>
+        </details>
+        <div id="listen-answers"></div>
+        <div class="player">
+          <button id="listen-restart" class="primary">New recording</button>
+          <button type="button" id="listen-download">⬇ Download result</button>
+        </div>
+      </section>
+    </div>
+
     <!-- ================= Reading comprehension ================= -->
     <div class="feature" id="feature-reading" hidden>
       <section id="read-setup">
@@ -796,5 +992,6 @@
   <script src="translation.js"></script>
   <script src="wordlist.js"></script>
   <script src="reading.js"></script>
+  <script src="shadowing.js"></script>
 </body>
 </html>

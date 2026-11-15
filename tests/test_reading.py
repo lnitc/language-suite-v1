@@ -203,3 +203,38 @@ def test_second_opinion_is_skipped_when_it_fails_and_for_straightforward_questio
     sid = start(client, question_count=1).json()["session_id"]
     client.post(f"/api/reading/sessions/{sid}/questions")
     assert len(fake.calls) == 2  # straightforward: no checking call
+
+
+# ---------- listening comprehension: the same exercise, heard ----------
+
+SPOKEN = "ja-JP\n駅からのお知らせ\n\n" + "本日は雨のため、電車が十分ほど遅れています。" * 4 + "\n\n" + "お急ぎのお客様はバスをご利用ください。" * 3
+
+
+def test_listening_text_is_written_for_the_ear_and_carries_its_language_code(client):
+    fake = FakeChat([SPOKEN, batch(q(1))])
+    use(fake)
+    started = start(client, kind="listening", language="Japanese", question_count=1, length="short").json()
+    assert (started["kind"], started["language_code"], started["title"]) == ("listening", "ja-JP", "駅からのお知らせ")
+    assert started["text"].startswith("本日は雨のため") and "ja-JP" not in started["text"]
+    prompt = fake.calls[0][1]["content"]
+    assert "listening comprehension exercise" in prompt and "will only hear this text" in prompt
+    assert "about 60 words" in prompt and "about 120 characters" in prompt
+    assert "spell numbers out in words" in prompt and "BCP-47 language code" in prompt
+
+    made = client.post(f"/api/reading/sessions/{started['session_id']}/questions").json()
+    assert "cannot read it" in fake.calls[1][1]["content"]
+    result = client.post(f"/api/reading/sessions/{started['session_id']}/submit", json={"answers": [None]}).json()
+    assert result["kind"] == "listening" and result["text"] == started["text"] and len(made["questions"]) == 1
+
+
+def test_listening_without_a_language_code_line_still_works_and_reading_is_unchanged(client):
+    use(FakeChat(["# Station news\n\n" + "The train is ten minutes late because of the rain. " * 4]))
+    started = start(client, kind="listening").json()
+    assert (started["language_code"], started["title"]) == ("", "Station news")
+
+    fake = FakeChat([TEXT])
+    use(fake)
+    reading_session = start(client).json()
+    assert (reading_session["kind"], reading_session["language_code"]) == ("reading", "")
+    assert "reading comprehension exercise" in fake.calls[0][1]["content"]
+    assert "BCP-47" not in fake.calls[0][1]["content"]

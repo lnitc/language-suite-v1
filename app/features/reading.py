@@ -1,4 +1,8 @@
-"""Feature 8: reading comprehension.
+"""Feature 8: reading comprehension, and feature 10: listening comprehension.
+
+Listening is the same exercise with the text spoken instead of shown: the
+text is written for the ear (spoken style, shorter), the browser's voice
+reads it, and the learner sees it only in the result.
 
 The teacher writes a text and multiple-choice questions about it (four
 options each). The learner chooses, the code marks the answers, and the
@@ -28,6 +32,7 @@ from ..providers.factory import get_chat_provider
 from ..context import feedback_language
 from ..textutils import normalize, parse_json
 from .dictation import DIFFICULTIES
+from .speech import clean_language_code
 
 router = APIRouter(prefix="/api/reading", tags=["reading"])
 
@@ -41,6 +46,8 @@ QUESTIONS_PER_CALL = 5
 # Target length: words, or characters for languages written without spaces.
 # "long" is about one A4 page, like a long passage in a proficiency exam.
 LENGTHS = {"short": (150, 300), "medium": (300, 600), "long": (500, 1000)}
+# Listening texts are shorter: "long" is about two minutes of speech.
+LISTENING_LENGTHS = {"short": (60, 120), "medium": (120, 250), "long": (220, 450)}
 # How hard the questions are to answer (separate from how hard the text is).
 QUESTION_STYLES = {
     "straightforward": (
@@ -78,6 +85,7 @@ class Question:
 
 @dataclass
 class Session:
+    kind: str  # "reading" or "listening"
     language: str
     difficulty: str
     system_prompt: str
@@ -85,6 +93,7 @@ class Session:
     question_style: str
     title: str
     text: str
+    language_code: str = ""  # for the voice, in listening
     questions: list[Question] = field(default_factory=list)
     result: dict | None = None
 
@@ -93,6 +102,7 @@ _sessions: OrderedDict[str, Session] = OrderedDict()
 
 
 class StartRequest(BaseModel):
+    kind: Literal["reading", "listening"] = "reading"
     language: str = Field(min_length=1, max_length=60)
     difficulty: Literal[
         "beginner", "elementary", "intermediate", "upper_intermediate", "advanced"
@@ -125,26 +135,44 @@ async def start_session(
     req: StartRequest, chat: ChatProvider = Depends(get_chat_provider)
 ) -> dict:
     """Step 1: the text."""
-    words, characters = LENGTHS[req.length]
+    listening = req.kind == "listening"
+    words, characters = (LISTENING_LENGTHS if listening else LENGTHS)[req.length]
     parts = [
-        f"Write a text in {req.language} for a reading comprehension exercise. "
+        f"Write a text in {req.language} for a {req.kind} comprehension exercise. "
         f"Learner level: {DIFFICULTIES[req.difficulty]}.",
         f"Length: about {words} words. If {req.language} is written without spaces "
         f"between words (like Japanese or Chinese), make it about {characters} characters instead.",
     ]
     if req.session_prompt.strip():
         parts.append(f"Learner's instructions for this session: {req.session_prompt.strip()}")
-    parts.append(
-        "Write the kind of passage found in the reading part of a language proficiency "
-        "exam: an article, essay, story, letter or report. It must contain enough "
-        "concrete content (facts, reasons, opinions, a sequence of events, a "
-        f"conclusion) for {req.question_count} comprehension questions."
-    )
-    parts.append(
-        "Format: the title on the first line, then an empty line, then the text in "
-        "paragraphs separated by empty lines. Plain text, no markdown, no questions, "
-        "no comments."
-    )
+    if listening:
+        parts.append(
+            "The learner will only hear this text, read aloud by one voice. Write the "
+            "kind of passage found in the listening part of a language proficiency "
+            "exam: a short talk, an announcement, a radio report, a voice message or a "
+            "story told by one person. Use natural spoken language with clear sentences. "
+            "No lists, no abbreviations, no symbols, and spell numbers out in words. It "
+            "must contain enough concrete content (who, what, when, why, what happens "
+            f"next) for {req.question_count} comprehension questions."
+        )
+        parts.append(
+            "Format: on the first line only the BCP-47 language code of the text (for "
+            'example "en-US" or "ja-JP"), on the second line a short title, then an '
+            "empty line, then the text in paragraphs separated by empty lines. Plain "
+            "text, no markdown, no questions, no comments."
+        )
+    else:
+        parts.append(
+            "Write the kind of passage found in the reading part of a language proficiency "
+            "exam: an article, essay, story, letter or report. It must contain enough "
+            "concrete content (facts, reasons, opinions, a sequence of events, a "
+            f"conclusion) for {req.question_count} comprehension questions."
+        )
+        parts.append(
+            "Format: the title on the first line, then an empty line, then the text in "
+            "paragraphs separated by empty lines. Plain text, no markdown, no questions, "
+            "no comments."
+        )
     messages = [
         {"role": "system", "content": req.system_prompt.strip() or DEFAULT_SYSTEM_PROMPT},
         {"role": "user", "content": "\n\n".join(parts)},
@@ -154,6 +182,14 @@ async def start_session(
     lines = [line.strip().lstrip("#").strip().replace("**", "") for line in raw.strip().strip("`").splitlines()]
     while lines and not lines[0]:
         lines.pop(0)
+    language_code = ""
+    if listening and lines:  # the first line should be the language code
+        candidate = re.sub(r"^.*[:：]\s*", "", lines[0]).strip('"`\' ')
+        if len(lines[0]) <= 40 and clean_language_code(candidate):
+            language_code = clean_language_code(candidate)
+            lines.pop(0)
+            while lines and not lines[0]:
+                lines.pop(0)
     title, paragraphs = "", []
     if len(lines) > 1 and len(lines[0]) <= 120:
         title = re.sub(r"^(title|タイトル)\s*[:：]\s*", "", lines.pop(0), flags=re.I).strip('"「」')
@@ -169,6 +205,7 @@ async def start_session(
 
     session_id = uuid.uuid4().hex
     _sessions[session_id] = Session(
+        kind=req.kind,
         language=req.language.strip(),
         difficulty=req.difficulty,
         system_prompt=req.system_prompt.strip(),
@@ -176,10 +213,18 @@ async def start_session(
         question_style=req.question_style,
         title=title,
         text=text,
+        language_code=language_code,
     )
     while len(_sessions) > MAX_SESSIONS:
         _sessions.popitem(last=False)
-    return {"session_id": session_id, "title": title, "text": text, "question_count": req.question_count}
+    return {
+        "session_id": session_id,
+        "kind": req.kind,
+        "title": title,
+        "text": text,  # in listening the browser speaks it and shows it only in the result
+        "language_code": language_code,
+        "question_count": req.question_count,
+    }
 
 
 def _parse_question(entry: object) -> Question | None:
@@ -239,6 +284,11 @@ async def _write_questions(session: Session, count: int, chat: ChatProvider) -> 
         "- Spread the questions over the whole text.",
         QUESTION_STYLES[session.question_style],
     ]
+    if session.kind == "listening":
+        parts.append(
+            "The learner listens to the text and cannot read it. Ask about what is "
+            "said, not about spelling or layout, and keep the questions and options short."
+        )
     if session.questions:
         parts.append(
             "These questions already exist. Ask about other things:\n"
@@ -425,6 +475,7 @@ async def submit(
             rows[number - 1]["why_wrong"] = why
 
     session.result = {
+        "kind": session.kind,
         "language": session.language,
         "question_style": session.question_style,
         "title": session.title,

@@ -7,7 +7,8 @@ The features are grouped into four sections:
 
 | Section | Features |
 |---|---|
-| Speaking | Conversation partner, job interview rehearsal, interpreter simulation (all by voice) |
+| Speaking | Conversation partner, job interview rehearsal, interpreter simulation, shadowing (all by voice) |
+| Listening | Listening comprehension (a spoken text with multiple-choice questions) |
 | Vocabulary | Vocabulary practice (text or voice), vocabulary list creator (CSV and other formats) |
 | Writing | Dictation (typed or handwritten), essay writing and written translation (typed, uploaded or handwritten) |
 | Reading | Reading comprehension (a text with multiple-choice questions) |
@@ -258,6 +259,37 @@ for the translation, each. Longer texts are accepted with a warning, up to
 3,000 characters. The limits are lower than for an essay because the model
 has to read two texts and write a third.
 
+## Listening comprehension
+
+The same exercise as reading comprehension, for the ear. The teacher writes
+a short talk, announcement or story in spoken style, the app reads it aloud,
+and you answer multiple-choice questions about it.
+
+- The text is not shown while you listen. You see it in the result, next to
+  the answers and explanations.
+- You can play it as often as you like, stop it, and change the speed.
+- "Long" is about two minutes of speech; texts are shorter than in reading.
+- The voice comes from your browser or your speech server (see "Voices"),
+  so its quality depends on the voice you have for that language.
+
+## Shadowing (listen and repeat)
+
+You hear a sentence, say it yourself, and see which words the app's speech
+recognition could make out. Words it could not recognise are highlighted,
+and you can try again as often as you like; your best try counts. At the end
+you get your average, the words that were missed most, and tips for them.
+
+- Sentences come from the teacher, or from your own text (upload a text,
+  PDF or `.docx`).
+- Tick **Hide the sentence** to repeat from listening only; the sentence is
+  shown after your first try.
+- This is not a pronunciation score. Speech recognition guesses what you
+  meant, so a recognised word is a good sign rather than proof, and it never
+  hears *how* you said it. A word that is not recognised is worth practising.
+- In languages with several ways of writing the same word (for example
+  kanji and kana in Japanese), a correctly spoken word can be marked as not
+  recognised when the recognition writes it differently.
+
 ## Reading comprehension
 
 The teacher writes a text and up to ten multiple-choice questions about it,
@@ -488,7 +520,8 @@ app/
     materials.py     reads text from uploaded PDF and Word files
     wordlist.py      Feature 6 (vocabulary list creator)
     essay.py         Feature 7 (essay writing)
-    reading.py       Feature 8 (reading comprehension)
+    reading.py       Features 8 and 10 (reading and listening comprehension)
+    shadowing.py     Feature 11 (shadowing: listen and repeat)
     translation.py   Feature 9 (written translation)
     handwriting.py   reads handwriting from photos (dictation and essay)
   textutils.py       shared text helpers (answer matching, dictation marking)

@@ -1,13 +1,71 @@
 "use strict";
-// Feature 8: reading comprehension. Uses helpers from common.js.
+// Features 8 and 10: reading comprehension and listening comprehension.
+// The same exercise twice: in reading the text is shown, in listening it is
+// spoken and shown only in the result. `prefix` is the start of the element
+// ids ("read" or "listen"). Uses helpers from common.js and voice.js.
 
-(() => {
-  const views = { setup: $("read-setup"), work: $("read-work"), results: $("read-results") };
+function setupComprehension(prefix, kind) {
+  const el = (name) => $(`${prefix}-${name}`);
+  const listening = kind === "listening";
+  const views = { setup: el("setup"), work: el("work"), results: el("results") };
   const LETTERS = ["A", "B", "C", "D"];
 
   let sessionId = null;
   let questions = [];
   let finished = null; // the last result, for the download
+
+  // ---------- listening: the text is spoken, sentence by sentence ----------
+  let spokenText = "";
+  let languageCode = "";
+  let playRun = 0; // raised to stop a playback that is under way
+  let playing = false;
+  let plays = 0;
+
+  function sentencesOf(text) {
+    return text
+      .split(/\n{2,}/)
+      .flatMap((paragraph) => paragraph.split(/(?<=[.!?…])\s+|(?<=[。！？])(?![」』）。！？])/))
+      .map((sentence) => sentence.trim())
+      .filter(Boolean);
+  }
+
+  function showPlayer() {
+    el("play").textContent = playing ? "■ Stop" : plays ? "▶ Play again" : "▶ Play";
+    if (!playing) {
+      el("play-status").textContent = plays
+        ? `Played ${plays} ${plays === 1 ? "time" : "times"}. You can listen as often as you like.`
+        : "Press Play to listen. The text is not shown until you have answered.";
+    }
+  }
+
+  async function playText() {
+    const run = ++playRun;
+    const parts = sentencesOf(spokenText);
+    showError("");
+    playing = true;
+    plays += 1;
+    showPlayer();
+    try {
+      for (let i = 0; i < parts.length && run === playRun; i += 1) {
+        el("play-status").textContent = `Playing… (sentence ${i + 1} of ${parts.length})`;
+        await voice.speak(parts[i], languageCode, Number(el("speed").value));
+      }
+    } catch (error) {
+      showError(error.message);
+    }
+    if (run === playRun) {
+      playing = false;
+      showPlayer();
+    }
+  }
+
+  function stopPlaying() {
+    if (!listening) return;
+    playRun += 1;
+    playing = false;
+    voice.stop();
+    showPlayer();
+  }
 
   function show(name) {
     for (const [key, el] of Object.entries(views)) el.hidden = key !== name;
@@ -25,20 +83,20 @@
 
   function chosenAnswers() {
     return questions.map((_, i) => {
-      const picked = document.querySelector(`input[name="read-q${i}"]:checked`);
+      const picked = document.querySelector(`input[name="${prefix}-q${i}"]:checked`);
       return picked ? Number(picked.value) : null;
     });
   }
 
   function updateUnanswered() {
     const open = chosenAnswers().filter((answer) => answer === null).length;
-    $("read-unanswered").textContent = open
+    el("unanswered").textContent = open
       ? `${open} of ${questions.length} questions not answered yet. Unanswered questions count as wrong.`
       : "All questions answered.";
   }
 
   function drawQuestions() {
-    const container = $("read-questions");
+    const container = el("questions");
     container.replaceChildren();
     questions.forEach((item, i) => {
       const fieldset = document.createElement("fieldset");
@@ -50,7 +108,7 @@
         const label = document.createElement("label");
         const radio = document.createElement("input");
         radio.type = "radio";
-        radio.name = `read-q${i}`;
+        radio.name = `${prefix}-q${i}`;
         radio.value = String(k);
         radio.addEventListener("change", updateUnanswered);
         const text = document.createElement("span");
@@ -66,58 +124,68 @@
   // Step 2: the questions arrive while the learner is already reading.
   async function loadQuestions() {
     const session = sessionId;
-    $("read-wait").hidden = false;
-    $("read-retry").hidden = true;
+    el("wait").hidden = false;
+    el("retry").hidden = true;
     try {
       const made = await api(`/api/reading/sessions/${session}/questions`, { method: "POST" });
       if (session !== sessionId) return; // the learner started something else meanwhile
       questions = made.questions;
       showNote(
-        "read-note",
+        `${prefix}-note`,
         questions.length < made.requested
           ? `The model made ${questions.length} usable questions instead of ${made.requested}.`
           : ""
       );
       drawQuestions();
-      $("read-form").hidden = false;
+      el("form").hidden = false;
     } catch (error) {
       if (session !== sessionId) return;
       showError(error.message);
-      $("read-retry").hidden = false;
+      el("retry").hidden = false;
     } finally {
-      if (session === sessionId) $("read-wait").hidden = true;
+      if (session === sessionId) el("wait").hidden = true;
     }
   }
 
-  $("read-setup-form").addEventListener("submit", async (event) => {
+  el("setup-form").addEventListener("submit", async (event) => {
     event.preventDefault();
     showError("");
-    const button = $("read-start");
+    const button = el("start");
     button.disabled = true;
     button.textContent = "Writing the text…";
     try {
       const started = await api("/api/reading/sessions", {
         method: "POST",
         body: JSON.stringify({
-          language: $("read-language").value.trim(),
-          difficulty: $("read-difficulty").value,
-          length: $("read-length").value,
-          question_count: Number($("read-count").value) || 5,
-          question_style: $("read-style").value,
-          system_prompt: $("read-system-prompt").value,
-          session_prompt: $("read-session-prompt").value,
+          kind,
+          language: el("language").value.trim(),
+          difficulty: el("difficulty").value,
+          length: el("length").value,
+          question_count: Number(el("count").value) || 5,
+          question_style: el("style").value,
+          system_prompt: el("system-prompt").value,
+          session_prompt: el("session-prompt").value,
         }),
       });
       sessionId = started.session_id;
       questions = [];
-      $("read-title").textContent = started.title;
-      $("read-title").hidden = !started.title;
-      fillText($("read-text"), started.text);
-      $("read-form").hidden = true;
-      showNote("read-note", "");
+      el("title").textContent = started.title;
+      el("title").hidden = !started.title;
+      if (listening) {
+        spokenText = started.text;
+        languageCode = started.language_code;
+        plays = 0;
+        playing = false;
+        voice.fillSelect(el("voice"), el("voice-label"), languageCode);
+        showPlayer();
+      } else {
+        fillText(el("text"), started.text);
+      }
+      el("form").hidden = true;
+      showNote(`${prefix}-note`, "");
       show("work");
       window.scrollTo(0, 0);
-      loadQuestions(); // not awaited: the text is on screen meanwhile
+      loadQuestions(); // not awaited: the learner can already read or listen
     } catch (error) {
       showError(error.message);
     } finally {
@@ -126,12 +194,13 @@
     }
   });
 
-  $("read-retry").addEventListener("click", () => {
+  el("retry").addEventListener("click", () => {
     showError("");
     loadQuestions();
   });
 
-  $("read-back").addEventListener("click", () => {
+  el("back").addEventListener("click", () => {
+    stopPlaying();
     sessionId = null;
     showError("");
     show("setup");
@@ -153,10 +222,10 @@
   }
 
   function renderResults(result) {
-    $("read-score").textContent = `Score: ${result.score} / ${result.total}`;
-    $("read-result-title").textContent = result.title;
-    fillText($("read-result-text"), result.text);
-    const container = $("read-answers");
+    el("score").textContent = `Score: ${result.score} / ${result.total}`;
+    el("result-title").textContent = result.title;
+    fillText(el("result-text"), result.text);
+    const container = el("answers");
     container.replaceChildren();
     for (const row of result.questions) {
       const box = document.createElement("div");
@@ -189,9 +258,10 @@
     }
   }
 
-  $("read-form").addEventListener("submit", async (event) => {
+  el("form").addEventListener("submit", async (event) => {
     event.preventDefault();
     showError("");
+    stopPlaying();
     setBusy(views.work, "Checking your answers…");
     try {
       const result = await api(`/api/reading/sessions/${sessionId}/submit`, {
@@ -209,25 +279,25 @@
     }
   });
 
-  $("read-restart").addEventListener("click", () => {
+  el("restart").addEventListener("click", () => {
     sessionId = null;
     showError("");
     show("setup");
   });
 
   // Saves the text, the questions, both answers and the explanations.
-  $("read-download").addEventListener("click", () => {
+  el("download").addEventListener("click", () => {
     if (!finished) return;
     const { result, date } = finished;
     const stamp = dateStamp(date);
     const lines = [
-      "Language Suite: Reading comprehension",
+      `Language Suite: ${listening ? "Listening" : "Reading"} comprehension`,
       `Language: ${result.language}`,
       `Date: ${stamp.day} ${stamp.time}`,
       `Score: ${result.score} / ${result.total}`,
       `Question difficulty: ${result.question_style === "tricky" ? "Tricky" : "Straightforward"}`,
       "",
-      "===== TEXT =====",
+      listening ? "===== TEXT (what you heard) =====" : "===== TEXT =====",
       "",
     ];
     if (result.title) lines.push(result.title, "");
@@ -243,6 +313,14 @@
       if (row.why_wrong) lines.push(`   Why your answer is wrong: ${row.why_wrong}`);
     }
     lines.push("");
-    downloadTextFile("reading", date, lines);
+    downloadTextFile(kind, date, lines);
   });
-})();
+
+  if (listening) {
+    el("play").addEventListener("click", () => (playing ? stopPlaying() : playText()));
+    document.addEventListener("feature-change", stopPlaying);
+  }
+}
+
+setupComprehension("read", "reading");
+setupComprehension("listen", "listening");

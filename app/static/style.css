@@ -199,3 +199,13 @@ fieldset.question input { width: auto; margin-top: 0.3rem; }
 #warning[hidden] { display: none; }
 #warning-close { padding: 0 0.5rem; border: none; background: transparent; color: inherit; font-size: 1.2rem; line-height: 1.2; }
 #talk-live label.inline { margin-top: 0.35rem; }
+
+/* ---------- Listening and shadowing ---------- */
+.listen-player { padding: 1rem 1.25rem; margin-bottom: 1.25rem; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); }
+.listen-player h2 { font-size: 1.1rem; margin-bottom: 0.25rem; }
+.listen-player .player { margin-bottom: 0.4rem; }
+.listen-player p { margin: 0; }
+.shadow-sentence { font-size: 1.5rem; font-weight: 600; line-height: 1.5; margin: 0.4rem 0 0.8rem; }
+#shadow-attempt { margin: 0.5rem 0 0.75rem; }
+#shadow-attempt p { margin: 0.25rem 0; }
+#shadow-marked { font-size: 1.15rem; }

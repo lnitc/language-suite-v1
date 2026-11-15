@@ -20,6 +20,7 @@ from .features import (
     interpreter,
     materials,
     reading,
+    shadowing,
     speech,
     talk,
     translation,
@@ -65,6 +66,7 @@ app.include_router(wordlist.router)
 app.include_router(essay.router)
 app.include_router(reading.router)
 app.include_router(translation.router)
+app.include_router(shadowing.router)
 
 # The browser UI. Mounted last so it does not shadow the API routes.
 app.mount(
