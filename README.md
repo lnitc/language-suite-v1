@@ -670,6 +670,37 @@ python -m pytest tests/browser         # the browser tests only
   a prompt in `app/features/`, update the matching phrase in
   `fake_services.py` (the test for that feature fails until you do).
 
+### Automated checks on GitHub
+
+`.github/workflows/checks.yml` makes GitHub run three checks on its own
+machines, for every push to the main branch and for every pull request:
+
+| Check | What it does | Fails when |
+|---|---|---|
+| Secret scan | gitleaks reads **every commit**, not only the newest | something that looks like a key or password was ever committed |
+| Tests | the quick tests on Linux and Windows, Python 3.11 and 3.13 | a test fails |
+| Browser tests | the browser tests on Linux | a page no longer works |
+
+The result appears as a green tick or a red cross next to the commit, and in
+the repository's **Actions** tab, where each step's output can be read. The
+checks need no secret, no model and no GPU, and they are free for public
+repositories.
+
+Two things to know:
+
+- The secret scan runs **after** a push, so by then the key is already on
+  GitHub. It is a net under the first line of defence, which is the
+  `pre-commit` scanner on each contributor's own computer (rule 4 below). If
+  the scan ever turns red, treat the key as leaked: revoke it and make a new
+  one.
+- By itself a red cross does not stop anything. To make the checks
+  compulsory, the repository owner switches on a rule once, on GitHub:
+  **Settings > Rules > Rulesets > New branch ruleset**, target the default
+  branch, tick **Require a pull request before merging** and **Require
+  status checks to pass**, and add the checks by name (they can be picked
+  after the workflow has run once). From then on a pull request can only be
+  merged when everything is green.
+
 ### Security rules for contributors
 
 1. **Never commit secrets.** Keys live only in `.env`, which is ignored by git.
