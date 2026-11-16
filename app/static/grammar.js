@@ -160,6 +160,22 @@
         body: JSON.stringify({ answers: answers() }),
       });
       finished = { result, date: new Date() };
+      saveToHistory({
+        feature: "grammar",
+        language: result.language,
+        title: result.topic || "",
+        score: result.score,
+        total: result.total,
+        lines: report(),
+        mistakes: result.items
+          .filter((row) => row.status === "wrong" || row.status === "skipped")
+          .map((row) => ({
+            prompt: `${row.sentence}${row.hint ? `  ${row.hint}` : ""}`,
+            your_answer: row.your_answer,
+            correct: row.correct_answers.join("  /  "),
+            note: row.explanation,
+          })),
+      });
       renderResults(result);
       show("results");
       window.scrollTo(0, 0);
@@ -176,8 +192,8 @@
     show("setup");
   });
 
-  $("gr-download").addEventListener("click", () => {
-    if (!finished) return;
+  // The result as lines of text: for the download and for the history.
+  function report() {
     const { result, date } = finished;
     const stamp = dateStamp(date);
     const lines = [
@@ -200,6 +216,10 @@
       if (row.explanation) lines.push(`   The rule: ${row.explanation}`);
     }
     lines.push("");
-    downloadTextFile("grammar", date, lines);
+    return lines;
+  }
+
+  $("gr-download").addEventListener("click", () => {
+    if (finished) downloadTextFile("grammar", finished.date, report());
   });
 })();

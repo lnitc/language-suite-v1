@@ -60,6 +60,26 @@
       const result = await api(`/api/vocabulary/sessions/${sessionId}/result`);
       awaitingResult = false;
       finished = { result, date: new Date(), voiceMode };
+      saveToHistory({
+        feature: "vocabulary",
+        language: languages.target,
+        title: `${languages.source} → ${languages.target}`,
+        score: result.score,
+        total: result.total,
+        lines: report(),
+        mistakes: result.items
+          .filter((item) => item.status === "wrong" || item.status === "skipped")
+          .map((item) => ({
+            prompt: item.word,
+            your_answer: item.your_answer || "",
+            correct: item.correct_translations.join(", "),
+            // enough to practise the word again from "My mistakes"
+            extra: { source_language: languages.source, translations: item.correct_translations, codes },
+          })),
+        mastered: result.items
+          .filter((item) => item.status === "correct" || item.status === "accepted")
+          .map((item) => item.word),
+      });
       renderResults(result);
       show("results");
     } finally {
@@ -90,6 +110,41 @@
     }
   }
 
+  function beginPractice(progress) {
+    sessionId = progress.session_id;
+    awaitingResult = false;
+    voiceMode = $("mode").value === "voice";
+    $("vocab-voice-tools").hidden = !voiceMode;
+    $("answer").placeholder = voiceMode
+      ? "Say the translation with the microphone, or type it"
+      : "Type the translation";
+    show("practice");
+    showWord(progress);
+  }
+
+  // "My mistakes" sends words here to be practised again: no model is
+  // needed, because the accepted translations are already known.
+  document.addEventListener("practise-words", async (event) => {
+    const { source, target, words } = event.detail;
+    showError("");
+    show("setup");
+    showNote("vocab-note", `Practising ${words.length} ${words.length === 1 ? "word" : "words"} from your mistakes.`);
+    setBusy(views.setup, "Preparing your words…");
+    try {
+      languages = { source, target };
+      const progress = await api("/api/vocabulary/sessions", {
+        method: "POST",
+        body: JSON.stringify({ source_language: source, target_language: target, words }),
+      });
+      codes = event.detail.codes || { source: "", target: "" };
+      beginPractice(progress);
+    } catch (error) {
+      showError(error.message);
+    } finally {
+      setBusy(views.setup, null);
+    }
+  });
+
   $("setup-form").addEventListener("submit", async (event) => {
     event.preventDefault();
     showError("");
@@ -114,16 +169,8 @@
           material,
         }),
       });
-      sessionId = progress.session_id;
-      awaitingResult = false;
       codes = { source: progress.source_language_code, target: progress.target_language_code };
-      voiceMode = $("mode").value === "voice";
-      $("vocab-voice-tools").hidden = !voiceMode;
-      $("answer").placeholder = voiceMode
-        ? "Say the translation with the microphone, or type it"
-        : "Type the translation";
-      show("practice");
-      showWord(progress);
+      beginPractice(progress);
     } catch (error) {
       showError(error.message);
     } finally {
@@ -166,8 +213,8 @@
   document.addEventListener("feature-change", () => { mic.reset(); });
   // Saves the result as a plain text file: every word with the learner's
   // translation, the correct translations and the outcome.
-  $("vocab-download").addEventListener("click", () => {
-    if (!finished) return;
+  // The result as lines of text: for the download and for the history.
+  function report() {
     const { result, date } = finished;
     const stamp = dateStamp(date);
     const percent = Math.round((result.score / result.total) * 100);
@@ -195,7 +242,11 @@
       toReview.forEach((item) => lines.push(`${item.word} = ${item.correct_translations.join(", ")}`));
     }
     lines.push("");
-    downloadTextFile("vocabulary", date, lines);
+    return lines;
+  }
+
+  $("vocab-download").addEventListener("click", () => {
+    if (finished) downloadTextFile("vocabulary", finished.date, report());
   });
 
   $("restart-button").addEventListener("click", () => {

@@ -269,6 +269,22 @@ function setupComprehension(prefix, kind) {
         body: JSON.stringify({ answers: chosenAnswers() }),
       });
       finished = { result, date: new Date() };
+      saveToHistory({
+        feature: kind,
+        language: result.language,
+        title: result.title || "",
+        score: result.score,
+        total: result.total,
+        lines: report(),
+        mistakes: result.questions
+          .filter((row) => !row.is_correct)
+          .map((row) => ({
+            prompt: row.question,
+            your_answer: row.chosen === null ? "" : row.options[row.chosen],
+            correct: row.options[row.correct],
+            note: row.explanation || "",
+          })),
+      });
       renderResults(result);
       show("results");
       window.scrollTo(0, 0);
@@ -286,8 +302,8 @@ function setupComprehension(prefix, kind) {
   });
 
   // Saves the text, the questions, both answers and the explanations.
-  el("download").addEventListener("click", () => {
-    if (!finished) return;
+  // The result as lines of text: for the download and for the history.
+  function report() {
     const { result, date } = finished;
     const stamp = dateStamp(date);
     const lines = [
@@ -313,7 +329,11 @@ function setupComprehension(prefix, kind) {
       if (row.why_wrong) lines.push(`   Why your answer is wrong: ${row.why_wrong}`);
     }
     lines.push("");
-    downloadTextFile(kind, date, lines);
+    return lines;
+  }
+
+  el("download").addEventListener("click", () => {
+    if (finished) downloadTextFile(kind, finished.date, report());
   });
 
   if (listening) {

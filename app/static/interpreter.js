@@ -191,6 +191,12 @@
         body: JSON.stringify({ interpretations: spoken }),
       });
       finished = { result, date: new Date() };
+      saveToHistory({
+        feature: "interpreter",
+        language: result.source_language,
+        title: `${result.mode === "dialogue" ? "Dialogue" : "Speech"}: ${result.source_language} ${result.mode === "dialogue" ? "↔" : "→"} ${result.target_language}`,
+        lines: report(),
+      });
       renderResults(result);
       show("results");
     } catch (error) {
@@ -202,8 +208,8 @@
 
   // Saves the result as a plain text file: for every part the original, the
   // learner's interpretation, the ideal version and the comment.
-  $("interp-download").addEventListener("click", () => {
-    if (!finished) return;
+  // The result as lines of text: for the download and for the history.
+  function report() {
     const { result, date } = finished;
     const stamp = dateStamp(date);
     const lines = [
@@ -231,7 +237,11 @@
       );
     }
     lines.push("");
-    downloadTextFile("interpreter", date, lines);
+    return lines;
+  }
+
+  $("interp-download").addEventListener("click", () => {
+    if (finished) downloadTextFile("interpreter", finished.date, report());
   });
 
   $("interp-restart").addEventListener("click", () => {

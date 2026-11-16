@@ -18,6 +18,7 @@ from .features import (
     dictation,
     essay,
     grammar,
+    history,
     interpreter,
     materials,
     public_speaking,
@@ -71,6 +72,7 @@ app.include_router(translation.router)
 app.include_router(shadowing.router)
 app.include_router(public_speaking.router)
 app.include_router(grammar.router)
+app.include_router(history.router)
 
 # The browser UI. Mounted last so it does not shadow the API routes.
 app.mount(

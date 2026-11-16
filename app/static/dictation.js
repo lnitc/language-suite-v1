@@ -132,6 +132,20 @@
         body: JSON.stringify(body),
       });
       finished = { result, date: new Date(), handwriting };
+      saveToHistory({
+        feature: "dictation",
+        language: result.language,
+        score: result.correct,
+        total: result.total,
+        lines: report(),
+        mistakes: result.sentences
+          .filter((row) => row.correct < row.total)
+          .map((row) => ({
+            prompt: row.original,
+            your_answer: row.typed.map((token) => token.text).join(row.joiner),
+            note: `Missed or wrong: ${row.expected.filter((token) => !token.ok).map((token) => token.text).join(row.joiner ? ", " : " ")}`,
+          })),
+      });
       renderResults(result);
       show("results");
     } catch (error) {
@@ -301,8 +315,8 @@
 
   // Saves the result as a plain text file: both versions of every sentence,
   // the words that differ, and the teacher's feedback.
-  $("dict-download").addEventListener("click", () => {
-    if (!finished) return;
+  // The result as lines of text: for the download and for the history.
+  function report() {
     const { result, date } = finished;
     const stamp = dateStamp(date);
     const differing = (tokens) => tokens.filter((token) => !token.ok).map((token) => token.text);
@@ -333,7 +347,11 @@
       if (extra.length) lines.push(`Not matching in your text: ${extra.join(row.joiner ? ", " : " ")}`);
     }
     lines.push("");
-    downloadTextFile("dictation", date, lines);
+    return lines;
+  }
+
+  $("dict-download").addEventListener("click", () => {
+    if (finished) downloadTextFile("dictation", finished.date, report());
   });
 
   $("dict-restart").addEventListener("click", () => {

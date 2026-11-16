@@ -256,6 +256,20 @@
         }),
       });
       finished = { result, date: new Date() };
+      saveToHistory({
+        feature: "translation",
+        language: result.target_language,
+        title: `${result.source_language} → ${result.target_language}`,
+        score: result.max_total ? result.total : null,
+        total: result.max_total || null,
+        lines: report(),
+        mistakes: result.corrections.map((item) => ({
+          prompt: item.source || item.yours || item.better,
+          your_answer: item.yours || "",
+          correct: item.better,
+          note: item.explanation || "",
+        })),
+      });
       renderResults(result);
       show("results");
       window.scrollTo(0, 0);
@@ -279,8 +293,8 @@
   });
 
   // Saves everything as a plain text file.
-  $("tr-download").addEventListener("click", () => {
-    if (!finished) return;
+  // The result as lines of text: for the download and for the history.
+  function report() {
     const { result, date } = finished;
     const stamp = dateStamp(date);
     const lines = [
@@ -303,7 +317,11 @@
       lines.push("");
     }
     lines.push("===== IDEAL VERSION =====", "", result.ideal, "");
-    downloadTextFile("translation", date, lines);
+    return lines;
+  }
+
+  $("tr-download").addEventListener("click", () => {
+    if (finished) downloadTextFile("translation", finished.date, report());
   });
 
   applyMode();

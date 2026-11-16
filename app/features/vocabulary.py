@@ -49,6 +49,11 @@ class Session:
 _sessions: OrderedDict[str, Session] = OrderedDict()
 
 
+class Word(BaseModel):
+    word: str = Field(min_length=1, max_length=300)
+    translations: list[str] = Field(min_length=1, max_length=10)
+
+
 class StartRequest(BaseModel):
     source_language: str = Field(min_length=1, max_length=60)
     target_language: str = Field(min_length=1, max_length=60)
@@ -56,6 +61,9 @@ class StartRequest(BaseModel):
     system_prompt: str = Field(default="", max_length=2000)
     session_prompt: str = Field(default="", max_length=2000)
     material: str = Field(default="", max_length=200_000)
+    # Ready-made words with their accepted translations (for example the
+    # learner's earlier mistakes). When given, no model writes the list.
+    words: list[Word] = Field(default_factory=list, max_length=50)
 
 
 class AnswerRequest(BaseModel):
@@ -149,6 +157,18 @@ async def _generate_items(req: StartRequest, chat: ChatProvider) -> tuple[list[I
     return items, codes
 
 
+def _ready_items(words: list[Word]) -> list[Item]:
+    items: list[Item] = []
+    seen: set[str] = set()
+    for entry in words:
+        word = entry.word.strip()
+        translations = [t.strip()[:300] for t in entry.translations if t.strip()]
+        if word and translations and normalize(word) not in seen:
+            seen.add(normalize(word))
+            items.append(Item(word=word, translations=translations))
+    return items
+
+
 async def _second_opinion(session: Session, chat: ChatProvider) -> None:
     """Ask the model whether 'wrong' answers are in fact valid translations."""
     doubtful = [
@@ -193,7 +213,12 @@ async def _second_opinion(session: Session, chat: ChatProvider) -> None:
 async def start_session(
     req: StartRequest, chat: ChatProvider = Depends(get_chat_provider)
 ) -> dict:
-    items, codes = await _generate_items(req, chat)
+    items = _ready_items(req.words)
+    codes = {"source_language_code": "", "target_language_code": ""}
+    if not items:
+        if req.words:
+            raise HTTPException(422, "None of these words can be practised.")
+        items, codes = await _generate_items(req, chat)
     session_id = uuid.uuid4().hex
     _sessions[session_id] = Session(
         source_language=req.source_language,

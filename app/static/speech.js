@@ -228,6 +228,19 @@
         body: JSON.stringify({ transcript: $("sp-transcript").value, seconds }),
       });
       finished = { result, date: new Date() };
+      saveToHistory({
+        feature: "speech",
+        language: result.language,
+        title: (result.assignment || "").split("\n")[0],
+        score: result.max_total ? result.total : null,
+        total: result.max_total || null,
+        lines: report(),
+        mistakes: result.corrections.map((item) => ({
+          prompt: item.original,
+          correct: item.better,
+          note: item.explanation || "",
+        })),
+      });
       renderResults(result);
       show("results");
       window.scrollTo(0, 0);
@@ -255,8 +268,8 @@
     show("setup");
   });
 
-  $("sp-download").addEventListener("click", () => {
-    if (!finished) return;
+  // The result as lines of text: for the download and for the history.
+  function report() {
     const { result, date } = finished;
     const stamp = dateStamp(date);
     const lines = [
@@ -280,7 +293,11 @@
       lines.push("");
     }
     lines.push("===== SAMPLE SCRIPT OF AN IDEAL SPEECH =====", "", result.sample, "");
-    downloadTextFile("speech", date, lines);
+    return lines;
+  }
+
+  $("sp-download").addEventListener("click", () => {
+    if (finished) downloadTextFile("speech", finished.date, report());
   });
 
   document.addEventListener("feature-change", () => {

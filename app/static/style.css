@@ -23,7 +23,7 @@ header p { margin: 0.2rem 0 1rem; }
 nav { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-bottom: 1rem; }
 #section-nav { gap: 0; border-bottom: 2px solid var(--line); margin-bottom: 0.8rem; }
 .section-tab {
-  padding: 0.55rem 1.1rem; margin-bottom: -2px; border: none; border-radius: 0;
+  padding: 0.55rem 0.8rem; margin-bottom: -2px; border: none; border-radius: 0;
   border-bottom: 3px solid transparent; background: transparent; color: var(--muted);
   font: inherit; font-size: 1.05rem; font-weight: 600;
 }
@@ -226,3 +226,20 @@ button.mic.record { min-width: 13rem; padding: 0.8rem 1.2rem; font-size: 1.05rem
 .drill-sentence .hint { color: var(--muted); font-size: 0.95rem; }
 .answer .given.wrong { color: var(--bad); }
 .answer .given.right { color: var(--good); font-weight: 600; }
+
+/* ---------- History and mistakes ---------- */
+label.check { display: flex; align-items: center; gap: 0.5rem; margin: 0.6rem 0 0.9rem; }
+label.check input { width: auto; }
+pre.report {
+  white-space: pre-wrap; overflow-wrap: anywhere; font: inherit; font-size: 0.95rem;
+  border: 1px solid var(--line); border-radius: 8px; padding: 0.8rem 1rem; max-height: 34rem; overflow-y: auto;
+}
+#hist-table td:last-child { white-space: nowrap; text-align: right; }
+#hist-table button, .mistake button { padding: 0.25rem 0.6rem; font-size: 0.85rem; }
+.mistake { border-top: 1px solid var(--line); padding: 0.7rem 0; }
+.mistake.learned .prompt { color: var(--muted); }
+.mistake p { margin: 0.15rem 0; }
+.mistake .prompt { font-size: 1.05rem; font-weight: 600; }
+.mistake .yours { color: var(--bad); }
+.mistake .right { color: var(--good); }
+.mistake .player { margin-top: 0.4rem; }

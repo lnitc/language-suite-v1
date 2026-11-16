@@ -202,6 +202,19 @@
         body: JSON.stringify({ text: $("essay-text").value }),
       });
       finished = { result, date: new Date() };
+      saveToHistory({
+        feature: "essay",
+        language: result.language,
+        title: (result.assignment || "").split("\n")[0],
+        score: result.max_total ? result.total : null,
+        total: result.max_total || null,
+        lines: report(),
+        mistakes: result.corrections.map((item) => ({
+          prompt: item.original,
+          correct: item.corrected,
+          note: item.explanation || "",
+        })),
+      });
       renderResults(result);
       show("results");
     } catch (error) {
@@ -224,8 +237,8 @@
   });
 
   // Saves everything as a plain text file.
-  $("essay-download").addEventListener("click", () => {
-    if (!finished) return;
+  // The result as lines of text: for the download and for the history.
+  function report() {
     const { result, date } = finished;
     const stamp = dateStamp(date);
     const lines = [
@@ -248,7 +261,11 @@
       lines.push("");
     }
     lines.push("===== IDEAL VERSION =====", "", result.ideal, "");
-    downloadTextFile("essay", date, lines);
+    return lines;
+  }
+
+  $("essay-download").addEventListener("click", () => {
+    if (finished) downloadTextFile("essay", finished.date, report());
   });
 
   applyMode();

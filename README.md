@@ -13,6 +13,7 @@ The features are grouped into four sections:
 | Writing | Dictation (typed or handwritten), essay writing and written translation (typed, uploaded or handwritten) |
 | Reading | Reading comprehension (a text with multiple-choice questions) |
 | Grammar | Grammar drills (fill in the blank, correct the mistake) |
+| Progress | History of your results, and a list of your mistakes to review |
 
 ## How it works
 
@@ -361,6 +362,51 @@ answer that does not match is then shown to the teacher, who accepts it if
 it is correct after all. Badly formed items (no blank, no clear answer) are
 discarded, so you may sometimes get fewer items than you asked for.
 
+## History and mistake review
+
+The **Progress** section keeps what you have done, so that you can see how
+you are getting on and come back to what went wrong.
+
+**History** lists every finished session with its date, language and score.
+A small table shows, per activity, how many sessions you did, your average
+score, and the average of your last five (compare the two to see whether you
+are improving). *Open* shows the full result again, exactly as in the
+"Download result" file, and you can download or delete it.
+
+**My mistakes** collects single things to review:
+
+| From | What is collected |
+| --- | --- |
+| Vocabulary practice | words you got wrong or skipped |
+| Grammar drills | items you got wrong or skipped |
+| Reading and listening comprehension | questions you got wrong |
+| Dictation | sentences with missed words |
+| Essay, Translation, Speech | the teacher's corrections |
+
+The same mistake made again is counted ("wrong 3 times") instead of being
+listed twice. **Practise the words in Vocabulary** starts a vocabulary
+session with your wrong words (up to 50, one language pair at a time); this
+needs no model, because the correct translations are already stored. A word
+you then translate correctly is marked as learned by itself. Other entries
+you mark as learned, or remove, by hand.
+
+Where it is stored: in one database file on your computer,
+`data/history.db` (SQLite, which comes with Python: nothing to install).
+
+- It is **not** in the browser, so it survives clearing the browser data
+  and is the same in every browser on this computer.
+- Only text is stored (scores, your answers, corrections, feedback), never
+  recordings. A result is a few kilobytes.
+- It never leaves your computer, and `data/` is ignored by git.
+- To back it up, copy the file. To start again, delete it while the app is
+  stopped, or use the delete buttons on the pages.
+- To keep it elsewhere, set `HISTORY_DB` in `.env`.
+- To stop saving, untick "Save my results in the history" on the History
+  page (remembered per browser).
+
+The app assumes **one learner per installation**: there are no user
+accounts, so everyone who uses this copy of the app shares one history.
+
 ## Vocabulary list creator
 
 Makes a word list and saves it as a CSV file, which opens in Excel and can
@@ -566,6 +612,7 @@ app/
     shadowing.py     Feature 11 (shadowing: listen and repeat)
     public_speaking.py   Feature 12 (speech: public speaking)
     grammar.py       Feature 13 (grammar drills)
+    history.py       History and mistake review (SQLite file in data/)
     translation.py   Feature 9 (written translation)
     handwriting.py   reads handwriting from photos (dictation and essay)
   textutils.py       shared text helpers (answer matching, dictation marking)

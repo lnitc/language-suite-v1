@@ -165,6 +165,52 @@ function dateStamp(date) {
   };
 }
 
+// ---------- history ----------
+
+// Saving results can be switched off on the History page.
+function historyIsOn() {
+  try {
+    return localStorage.getItem("language-suite-history") !== "off";
+  } catch {
+    return true;
+  }
+}
+
+// Keeps a finished result in the history on this computer (see
+// app/features/history.py): `lines` is the same text as the download, and
+// `mistakes` are single things to review later. A result that cannot be
+// saved is still on screen, so a failure here only shows a note.
+async function saveToHistory({ feature, language, title = "", score = null, total = null, lines, mistakes = [], mastered = [] }) {
+  if (!historyIsOn()) return;
+  const cut = (text, limit = 2000) => String(text ?? "").trim().slice(0, limit);
+  try {
+    await api("/api/history/results", {
+      method: "POST",
+      body: JSON.stringify({
+        feature,
+        language: cut(language, 130) || "-",
+        title: cut(title, 200),
+        score: total ? score : null,
+        total: total || null,
+        report: lines.join("\n").slice(0, 300000),
+        mistakes: mistakes
+          .filter((item) => cut(item.prompt))
+          .slice(0, 60)
+          .map((item) => ({
+            prompt: cut(item.prompt),
+            your_answer: cut(item.your_answer),
+            correct: cut(item.correct),
+            note: cut(item.note),
+            extra: item.extra || {},
+          })),
+        mastered: mastered.map((text) => cut(text)).filter(Boolean).slice(0, 60),
+      }),
+    });
+  } catch (error) {
+    showWarning(`This result could not be saved to your history : ${error.message} You can still download it.`);
+  }
+}
+
 // Shrinks a photo in the browser before upload: phone photos are far larger
 // than a model needs, and a smaller image is read faster. Returns a JPEG data URL.
 async function photoToDataUrl(file, longestSide = 1600) {

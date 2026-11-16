@@ -279,6 +279,7 @@
         feedback: result.feedback,
         transcript: result.transcript,
       };
+      saveToHistory({ feature: kind, language: finished.language, lines: report() });
       $("talk-feedback").textContent = result.feedback;
       const log = $("talk-final-transcript");
       log.replaceChildren();
@@ -301,10 +302,9 @@
   $("talk-restart").addEventListener("click", leaveSession);
 
   // Saves the script and the feedback as a plain text file.
-  $("talk-download").addEventListener("click", () => {
-    if (!finished) return;
+  function report() {
     const stamp = dateStamp(finished.date);
-    downloadTextFile(finished.kind, finished.date, [
+    return [
       `Language Suite: ${finished.title}`,
       `Language: ${finished.language}`,
       `Date: ${stamp.day} ${stamp.time}`,
@@ -317,7 +317,11 @@
       "",
       ...finished.transcript.map((row) => `${row.speaker}: ${row.text}`),
       "",
-    ]);
+    ];
+  }
+
+  $("talk-download").addEventListener("click", () => {
+    if (finished) downloadTextFile(finished.kind, finished.date, report());
   });
 
   document.addEventListener("feature-change", (event) => {

@@ -169,6 +169,13 @@
     try {
       const result = await api(`/api/shadowing/sessions/${sessionId}/finish`, { method: "POST" });
       finished = { result, date: new Date() };
+      saveToHistory({
+        feature: "shadowing",
+        language: result.language,
+        score: result.average,
+        total: result.average === null ? null : 100,
+        lines: report(),
+      });
       renderResults(result);
       show("results");
     } catch (error) {
@@ -192,8 +199,8 @@
     show("setup");
   });
 
-  $("shadow-download").addEventListener("click", () => {
-    if (!finished) return;
+  // The result as lines of text: for the download and for the history.
+  function report() {
     const { result, date } = finished;
     const stamp = dateStamp(date);
     const lines = [
@@ -215,7 +222,11 @@
       if (row.missed.length) lines.push(`   Not recognised: ${row.missed.join(", ")}`);
     }
     lines.push("");
-    downloadTextFile("shadowing", date, lines);
+    return lines;
+  }
+
+  $("shadow-download").addEventListener("click", () => {
+    if (finished) downloadTextFile("shadowing", finished.date, report());
   });
 
   document.addEventListener("feature-change", () => {
