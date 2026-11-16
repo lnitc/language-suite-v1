@@ -1,0 +1,5 @@
+# Only for the browser tests in tests/browser (optional, for developers).
+#   pip install -r requirements-browser.txt
+#   python -m playwright install chromium     (not needed if Chrome or Edge is installed)
+-r requirements-dev.txt
+playwright>=1.45

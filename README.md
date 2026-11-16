@@ -618,6 +618,7 @@ app/
   textutils.py       shared text helpers (answer matching, dictation marking)
   static/            browser UI (plain HTML, CSS, JavaScript)
 tests/               run without any model, using a fake provider
+  browser/           tests that click through the pages in a real browser
 data/                local user data, ignored by git
 ```
 
@@ -627,10 +628,47 @@ register it in `providers/factory.py`.
 
 ### Tests
 
+There are two kinds, and neither needs Ollama, a GPU or a microphone.
+
+| | Quick tests (`tests/`) | Browser tests (`tests/browser/`) |
+|---|---|---|
+| What they check | The Python code behind each feature | The pages themselves: a real browser clicks through every feature |
+| The model is replaced by | A fake provider inside the test | A pretend model, voice and speech-recognition server (`tests/browser/fake_services.py`) |
+| Extra install | none | `playwright`, and a browser (installed Chrome or Edge is enough) |
+| Time | a few seconds | about half a minute |
+
 ```powershell
 pip install -r requirements-dev.txt
-python -m pytest
+python -m pytest -m "not browser"      # the quick tests only
 ```
+
+For the browser tests, install once:
+
+```powershell
+pip install -r requirements-browser.txt
+```
+
+Then:
+
+```powershell
+python -m pytest                       # everything
+python -m pytest tests/browser         # the browser tests only
+```
+
+- No browser window appears. To watch the tests click through the pages,
+  run `$env:BROWSER_TESTS_HEADED = "1"` first (same PowerShell window).
+- The tests look for Playwright's own Chromium, then installed Chrome, then
+  Edge. To download Playwright's Chromium: `python -m playwright install chromium`.
+  To use another Chromium-based browser, put its full path in
+  `BROWSER_TESTS_CHROME`.
+- Without the `playwright` package the browser tests are reported as
+  *skipped*, not failed.
+- They start their own copy of the app on a spare port, with a temporary
+  history file. Your `.env`, your Ollama and your `data/history.db` are not
+  used, and a running app does not get in the way.
+- The pretend server recognises each prompt by a phrase in it. If you reword
+  a prompt in `app/features/`, update the matching phrase in
+  `fake_services.py` (the test for that feature fails until you do).
 
 ### Security rules for contributors
 
