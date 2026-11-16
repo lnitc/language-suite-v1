@@ -12,6 +12,7 @@ The features are grouped into four sections:
 | Vocabulary | Vocabulary practice (text or voice), vocabulary list creator (CSV and other formats) |
 | Writing | Dictation (typed or handwritten), essay writing and written translation (typed, uploaded or handwritten) |
 | Reading | Reading comprehension (a text with multiple-choice questions) |
+| Grammar | Grammar drills (fill in the blank, correct the mistake) |
 
 ## How it works
 
@@ -341,6 +342,25 @@ whose "correct" answer is debatable; if a question looks wrong, trust the
 text. Badly formed questions are discarded, so you may sometimes get fewer
 questions than you asked for.
 
+## Grammar drills
+
+Short exercises on a grammar point.
+
+1. Choose the language and difficulty, and name the grammar point (for
+   example "past simple or present perfect"). Leave it empty and the teacher
+   picks points that suit your level.
+2. Choose the type of exercise: **fill in the blank** (complete a sentence),
+   **correct the mistake** (rewrite a sentence that contains one error), or
+   mixed. Up to ten items.
+3. You get your score, and for every item your answer, the correct answer,
+   the rule behind it, and a comment on what was wrong with your answer.
+
+Marking works as in vocabulary practice: the app compares your answer with
+the accepted answers itself, ignoring capital letters and punctuation. An
+answer that does not match is then shown to the teacher, who accepts it if
+it is correct after all. Badly formed items (no blank, no clear answer) are
+discarded, so you may sometimes get fewer items than you asked for.
+
 ## Vocabulary list creator
 
 Makes a word list and saves it as a CSV file, which opens in Excel and can
@@ -545,6 +565,7 @@ app/
     reading.py       Features 8 and 10 (reading and listening comprehension)
     shadowing.py     Feature 11 (shadowing: listen and repeat)
     public_speaking.py   Feature 12 (speech: public speaking)
+    grammar.py       Feature 13 (grammar drills)
     translation.py   Feature 9 (written translation)
     handwriting.py   reads handwriting from photos (dictation and essay)
   textutils.py       shared text helpers (answer matching, dictation marking)

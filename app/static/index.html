@@ -58,6 +58,7 @@
     <button class="section-tab" data-section="vocabulary">Vocabulary</button>
     <button class="section-tab" data-section="writing">Writing</button>
     <button class="section-tab" data-section="reading">Reading</button>
+    <button class="section-tab" data-section="grammar">Grammar</button>
   </nav>
   <!-- The features of the chosen section. Hidden when a section has only one. -->
   <nav id="feature-nav" aria-label="Features">
@@ -73,6 +74,7 @@
     <button class="tab" data-section="writing" data-feature="essay" hidden>Essay</button>
     <button class="tab" data-section="writing" data-feature="translation" hidden>Translation</button>
     <button class="tab" data-section="reading" data-feature="reading" hidden>Reading comprehension</button>
+    <button class="tab" data-section="grammar" data-feature="grammar" hidden>Grammar drills</button>
   </nav>
 
   <main>
@@ -1008,6 +1010,77 @@
       </section>
     </div>
 
+    <!-- ================= Grammar drills ================= -->
+    <div class="feature" id="feature-grammar" hidden>
+      <section id="gr-setup">
+        <h2>Grammar drills</h2>
+        <form id="gr-setup-form">
+          <div class="row">
+            <label>Language
+              <input id="gr-language" required maxlength="60" placeholder="e.g. English">
+            </label>
+            <label>Difficulty
+              <select id="gr-difficulty">
+                <option value="beginner">Beginner (A1)</option>
+                <option value="elementary">Elementary (A2)</option>
+                <option value="intermediate" selected>Intermediate (B1)</option>
+                <option value="upper_intermediate">Upper-intermediate (B2)</option>
+                <option value="advanced">Advanced (C1)</option>
+              </select>
+            </label>
+          </div>
+          <label>Grammar point <span class="muted">(optional: leave empty and the teacher chooses for your level)</span>
+            <input id="gr-topic" maxlength="200" placeholder="e.g. past simple or present perfect; は and が; the subjunctive">
+          </label>
+          <div class="row">
+            <label>Type of exercise
+              <select id="gr-exercise">
+                <option value="mixed" selected>Mixed</option>
+                <option value="gap">Fill in the blank</option>
+                <option value="fix">Correct the mistake</option>
+              </select>
+            </label>
+            <label>Number of items <span class="muted">(up to 10)</span>
+              <input id="gr-count" type="number" min="1" max="10" value="5" required>
+            </label>
+          </div>
+          <label>System prompt <span class="muted">(optional: who the teacher is)</span>
+            <textarea id="gr-system-prompt" rows="2" maxlength="2000"
+              placeholder="You are an experienced grammar teacher."></textarea>
+          </label>
+          <label>Session prompt <span class="muted">(optional: topic of the sentences, what to focus on)</span>
+            <textarea id="gr-session-prompt" rows="2" maxlength="2000"
+              placeholder="e.g. Sentences about travel; I often confuse 'for' and 'since'"></textarea>
+          </label>
+          <button id="gr-start" type="submit" class="primary">Create exercises</button>
+        </form>
+      </section>
+
+      <section id="gr-work" hidden>
+        <h2>Exercises</h2>
+        <p id="gr-note" class="note" hidden></p>
+        <form id="gr-form">
+          <div id="gr-items"></div>
+          <p id="gr-unanswered" class="muted"></p>
+          <p class="muted">Capital letters and punctuation are not marked.</p>
+          <div class="row">
+            <button type="button" id="gr-back">← Back to the settings</button>
+            <button type="submit" class="primary">Check my answers</button>
+          </div>
+        </form>
+      </section>
+
+      <section id="gr-results" hidden>
+        <h2>Your result</h2>
+        <p id="gr-score" class="score"></p>
+        <div id="gr-answers"></div>
+        <div class="player">
+          <button id="gr-restart" class="primary">New exercises</button>
+          <button type="button" id="gr-download">⬇ Download result</button>
+        </div>
+      </section>
+    </div>
+
     <!-- ================= Word list creator ================= -->
     <div class="feature" id="feature-wordlist" hidden>
       <section id="wl-setup">
@@ -1107,5 +1180,6 @@
   <script src="reading.js"></script>
   <script src="shadowing.js"></script>
   <script src="speech.js"></script>
+  <script src="grammar.js"></script>
 </body>
 </html>

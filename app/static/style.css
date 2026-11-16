@@ -218,3 +218,11 @@ button.mic.record { min-width: 13rem; padding: 0.8rem 1.2rem; font-size: 1.05rem
 .timer.over { color: var(--warn); }
 #sp-audio { width: 100%; }
 #sp-form { margin-top: 0.5rem; }
+
+/* ---------- Grammar ---------- */
+.drill { border: 1px solid var(--line); border-radius: 8px; margin: 0 0 0.9rem; padding: 0.7rem 1rem 0.9rem; }
+.drill .task { margin: 0 0 0.3rem; font-size: 0.85rem; color: var(--muted); font-weight: 600; }
+.drill-sentence { margin: 0 0 0.6rem; font-size: 1.15rem; }
+.drill-sentence .hint { color: var(--muted); font-size: 0.95rem; }
+.answer .given.wrong { color: var(--bad); }
+.answer .given.right { color: var(--good); font-weight: 600; }

@@ -30,12 +30,12 @@ function feedbackLanguage() {
 // Which form fields each setting fills in.
 const SETTING_FIELDS = [
   ["talk-language", "learning"], ["dict-language", "learning"], ["essay-language", "learning"],
-  ["read-language", "learning"], ["listen-language", "learning"], ["shadow-language", "learning"], ["sp-language", "learning"], ["wl-source", "learning"], ["wl-target", "native"],
+  ["read-language", "learning"], ["listen-language", "learning"], ["shadow-language", "learning"], ["sp-language", "learning"], ["gr-language", "learning"], ["wl-source", "learning"], ["wl-target", "native"],
   ["interp-source", "learning"], ["interp-target", "native"],
   ["source-language", "native"], ["target-language", "learning"],        // vocabulary: shown in my language, answered in the new one
   ["tr-source-language", "native"], ["tr-target-language", "learning"],  // translation: into the language being learned
   ["talk-difficulty", "level"], ["dict-difficulty", "level"], ["essay-difficulty", "level"],
-  ["read-difficulty", "level"], ["listen-difficulty", "level"], ["shadow-difficulty", "level"], ["sp-difficulty", "level"], ["interp-difficulty", "level"], ["wl-difficulty", "level"], ["tr-difficulty", "level"],
+  ["read-difficulty", "level"], ["listen-difficulty", "level"], ["shadow-difficulty", "level"], ["sp-difficulty", "level"], ["gr-difficulty", "level"], ["interp-difficulty", "level"], ["wl-difficulty", "level"], ["tr-difficulty", "level"],
 ];
 
 // Fills in fields the learner has not touched: empty ones, and ones that

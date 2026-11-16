@@ -133,7 +133,7 @@ function setupComprehension(prefix, kind) {
       showNote(
         `${prefix}-note`,
         questions.length < made.requested
-          ? `The model made ${questions.length} usable questions instead of ${made.requested}.`
+          ? `The model made ${questions.length} usable ${questions.length === 1 ? "question" : "questions"} instead of ${made.requested}.`
           : ""
       );
       drawQuestions();
