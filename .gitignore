@@ -30,3 +30,6 @@ venv/
 .idea/
 Thumbs.db
 .DS_Store
+
+# --- MISC ---
+LICENSE

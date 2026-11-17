@@ -3,7 +3,7 @@
 An app for practising languages with an AI teacher. It runs on your own
 computer with free local models, or with a cloud AI service if you prefer.
 
-The features are grouped into four sections:
+The features are grouped into seven sections:
 
 | Section | Features |
 |---|---|
@@ -14,6 +14,22 @@ The features are grouped into four sections:
 | Reading | Reading comprehension (a text with multiple-choice questions) |
 | Grammar | Grammar drills (fill in the blank, correct the mistake) |
 | Progress | History of your results, and a list of your mistakes to review |
+
+## Contents
+
+- Getting started: [How it works](#how-it-works) ·
+  [Which setup should I choose?](#which-setup-should-i-choose) ·
+  [Installation (Windows 11)](#installation-windows-11) ·
+  [Installation (macOS)](#installation-macos) ·
+  [Starting again and updating](#starting-again-and-updating) ·
+  [Changing or replacing the local model](#changing-or-replacing-the-local-model)
+- Using the app: [Settings](#settings) · [Context window](#context-window) ·
+  the features, one section each ·
+  [Voices](#voices-text-to-speech) · [Microphone](#microphone-speech-to-text)
+- Good to know: [Limitations](#limitations) ·
+  [What leaves your computer](#what-leaves-your-computer) ·
+  [Troubleshooting](#troubleshooting) · [Pending](#pending)
+- [For developers](#for-developers) · [Licence](#licence)
 
 ## How it works
 
@@ -57,8 +73,10 @@ git --version
 
 ```powershell
 git clone <repository URL>
-cd language-suite
+cd language-suite-v1
 ```
+
+(`cd` into whatever folder `git clone` created, if it has another name.)
 
 ### 3. Create a private Python environment
 
@@ -140,6 +158,153 @@ python -m uvicorn app.main:app --port 8000
 Open <http://localhost:8000> in your browser. Press `Ctrl+C` in PowerShell to
 stop the app. It only listens on your own computer, not on the network.
 
+## Installation (macOS)
+
+The app is plain Python and runs on a Mac in the same way. Only the commands
+differ. **These steps have not been tested on a Mac by the author yet** (see
+"Pending"); if one of them fails, please open an issue.
+
+1. **Install the basics.** Python 3.11 or newer from
+   <https://www.python.org/downloads/> (or `brew install python` if you use
+   Homebrew). Git comes with Apple's command line tools: open **Terminal**
+   and run `xcode-select --install`. Then check both:
+
+   ```bash
+   python3 --version
+   git --version
+   ```
+
+2. **Get the code and create a private Python environment:**
+
+   ```bash
+   git clone <repository URL>
+   cd language-suite-v1
+   python3 -m venv .venv
+   source .venv/bin/activate
+   pip install -r requirements.txt
+   pip install -r requirements-voice.txt    # for the microphone features
+   cp .env.example .env
+   ```
+
+   Run `source .venv/bin/activate` again each time you open a new Terminal
+   window. While the environment is active, `python` means the right Python.
+
+3. **Local setup: Ollama.** Download the macOS app from
+   <https://ollama.com/download>, open it once (an icon appears in the menu
+   bar), then in Terminal:
+
+   ```bash
+   ollama pull gemma4:e4b
+   ollama run gemma4:e4b "Say hello in Spanish"
+   ```
+
+   A Mac shares one memory between the system and the model, so choose the
+   model by total memory rather than graphics memory. As a starting point:
+   8 GB, the smallest model (`gemma4:e2b`) or a cloud service; 16 GB,
+   `gemma4:e4b`; 32 GB or more, a larger one. Macs with Apple silicon
+   (M1 and later) are much faster than Intel Macs.
+
+   For a cloud service instead, follow step 5b of the Windows instructions:
+   the settings are the same.
+
+4. **Start the app** and open <http://localhost:8000>. Press `Ctrl+C` in
+   Terminal to stop it.
+
+   ```bash
+   python -m uvicorn app.main:app --port 8000
+   ```
+
+Differences from the Windows instructions in the rest of this document:
+
+| Topic | On a Mac |
+|---|---|
+| Commands | Use Terminal instead of PowerShell; `copy` is `cp`; the environment is activated with `source .venv/bin/activate` |
+| Browser | Use Chrome or Edge. Safari has not been tried |
+| Voices | Add voices in **System Settings > Accessibility > Spoken Content > System voice > Manage Voices** (the names differ a little between macOS versions), then restart the browser |
+| Microphone | Allow the browser in **System Settings > Privacy & Security > Microphone** |
+| Context window | Instead of `setx`, run `launchctl setenv OLLAMA_CONTEXT_LENGTH 8192`, then quit and reopen Ollama (newer versions of the Ollama app also have this in their own settings window) |
+| Speech recognition | `STT_DEVICE=cpu` (the default) is the right setting; `cuda` is for NVIDIA cards only |
+| Developer commands | `$env:NAME = "1"` in PowerShell is `export NAME=1` in Terminal |
+
+## Starting again and updating
+
+To start the app on another day (Windows; on a Mac use the activation
+command from the macOS section):
+
+```powershell
+cd <the project folder>
+.venv\Scripts\Activate.ps1
+python -m uvicorn app.main:app --port 8000
+```
+
+Ollama starts with the computer and needs nothing. To get a newer version
+of the app:
+
+```powershell
+git pull
+pip install -r requirements.txt
+```
+
+Then restart the app and reload the page with `Ctrl+F5`, so the browser
+does not keep old files. Your `.env` and your history in `data/` stay as
+they are.
+
+## Changing or replacing the local model
+
+The app does not depend on one model. `gemma4:e4b` is only the default
+written in `.env.example`; any chat model that Ollama offers can take its
+place. This is also what to do if that model is ever renamed, removed from
+Ollama's library, or replaced by a newer version.
+
+How you notice: `ollama pull` answers that the model was not found, or the
+app shows "Model ... was not found". A model you have already downloaded
+keeps working, because it is stored on your computer; the problem only
+appears on a new installation.
+
+**1. Find a model.** Open <https://ollama.com/library> (or
+<https://ollama.com/search>) and look for a model that passes these checks:
+
+| Check | What to look for | Why |
+|---|---|---|
+| Size | The download size on the model's page. As a rule of thumb it should be smaller than your graphics memory, with a little room to spare | A model that does not fit runs partly on the processor and becomes very slow. (A few models, `gemma4:e4b` among them, are larger on disk than what they need while running, because they carry extra parts for images and sound. When in doubt, try the model: `ollama ps` shows "100% GPU" when it fits) |
+| Languages | "Multilingual" in the description, and your languages if they are listed | Some models are good in English only |
+| Images | The **vision** label | Needed only for handwriting (dictation, essay, translation) and image material |
+| Kind | A general chat or "instruct" model | Models made for code, embeddings or reasoning only are a poor teacher |
+| Licence | The licence shown on the model's page | Models are free to download, but each has its own terms of use |
+| Age | Prefer a recent, popular model | Newer small models are clearly better than old ones of the same size |
+
+Model names have the form `family:size`, for example `gemma4:e4b`. The
+**Tags** list on a model's page shows every size with its download size.
+Families that have offered small multilingual models are, for example,
+Gemma, Qwen, Mistral, Llama, Phi and Granite; check the library for what
+exists today, because names and versions change often.
+
+**2. Download and try it:**
+
+```powershell
+ollama pull <name>
+ollama run <name> "Explain the difference between 'por' and 'para' in two sentences."
+ollama show <name>
+```
+
+`ollama show` prints the model's context length, its licence and its
+capabilities; "vision" must be listed there if you want handwriting to work.
+
+**3. Tell the app.** In `.env`, set `LLM_MODEL=<name>` and restart the app.
+The model in use is shown at the top of the page.
+
+**4. Check it with the app.** Small models differ most in two things this
+app relies on: writing in the language you asked for, and answering in the
+structured form the app expects. Try a vocabulary session, a grammar drill
+and a reading text. If you often see "did not return a usable ...", or
+feedback in the wrong language, try another model or the next size up.
+
+**5. Tidy up.** `ollama list` shows what is installed and how much space
+each model takes; `ollama rm <old name>` deletes one.
+
+If no local model works well enough on your computer, a cloud service is
+the other route (step 5b of the installation): the features are the same.
+
 ## Settings
 
 The **Settings** button at the top opens a small panel where you set, once:
@@ -180,6 +345,48 @@ larger window needs more memory; if the model becomes much slower, it no
 longer fits in your graphics memory, so choose a smaller number or shorter
 texts. With a cloud service, set `LLM_CONTEXT_TOKENS` to the limit of your
 model, or to `0` to switch the check off.
+
+## Conversation partner and job interview
+
+Speak with the model by voice. In **Conversation** it is a teacher who talks
+with you about a topic of your choice; in **Job interview** it is an
+interviewer who asks a set number of questions.
+
+1. Choose the language and difficulty. The session prompt sets the topic
+   ("Let's talk about fashion trends") or the job; for an interview you can
+   upload your CV or the job description as material.
+2. The other person speaks first. Answer with the microphone (see
+   "Microphone"), or tick **Hands-free**. **Repeat** plays the last thing
+   said again, and you can change the speed and the voice.
+3. End the session to get feedback on what went well and what to improve,
+   with the script of the whole conversation, both downloadable.
+
+## Vocabulary practice
+
+The app shows a word in one language and you translate it into the other,
+by typing (**Text**) or by saying it (**Voice**).
+
+- The words come from the teacher (describe the topic and level in the
+  session prompt) or from your own word list file.
+- Your answer is compared with the accepted translations by the app itself.
+  An answer that does not match is shown to the teacher at the end, who
+  accepts it if it is a correct translation after all.
+- In voice mode the word is read aloud and your spoken answer is written
+  into the answer box, where you can correct it before you submit.
+- Wrong and skipped words go to **Progress > My mistakes**, from where you
+  can practise them again.
+
+## Dictation
+
+The app reads a text aloud sentence by sentence and you write what you hear,
+on the keyboard or by hand (see "Handwritten dictation").
+
+- Choose the language, difficulty and length (about 3, 6 or 10 sentences).
+  The text comes from the teacher, or from your own material.
+- Play each sentence as often as you like, at slow, normal or fast speed.
+- The result shows every sentence with the words you missed or wrote
+  differently, your accuracy, and the teacher's comment. Punctuation and
+  capital letters are not marked.
 
 ## Interpreter simulation
 
@@ -471,7 +678,9 @@ a straight, well-lit photo.
 
 ## Voices (text to speech)
 
-Dictation reads each sentence aloud. There are two ways to get a voice, set
+Every feature in which you listen (conversation, job interview, interpreter,
+shadowing, listening comprehension, dictation, the voice mode of vocabulary
+and the sample speech) needs a voice. There are two ways to get one, set
 with `TTS_PROVIDER` in `.env`.
 
 | | `browser` (default) | `openai_compatible` |
@@ -483,8 +692,8 @@ with `TTS_PROVIDER` in `.env`.
 
 ### Browser voices
 
-Use Chrome or Edge. The app lists the voices that match the dictation
-language and lets you pick one.
+Use Chrome or Edge. The app lists the voices that match the language of the
+session and lets you pick one.
 
 If the app says there is no voice for your language, add it in Windows:
 **Settings > Time & language > Language & region > Add a language**, choose
@@ -510,8 +719,9 @@ TTS_API_KEY=<your own key, or empty for a local server>
 
 ## Microphone (speech to text)
 
-Conversation, job interview, interpreter and the voice mode of vocabulary
-record you with the microphone and turn the recording into text. Set the
+Conversation, job interview, interpreter, speech, shadowing and the voice
+mode of vocabulary record you with the microphone and turn the recording
+into text. Set the
 method with `STT_PROVIDER` in `.env`.
 
 | | `faster_whisper` (default) | `openai_compatible` |
@@ -566,6 +776,68 @@ Good to know: speech recognition writes down what it believes you meant. It
 cannot judge pronunciation, and it sometimes tidies up small slips, so the
 feedback is about words, grammar and content.
 
+## Limitations
+
+The teacher is a language model, and with the local setup a small one. It is
+a patient practice partner, not an examiner: it can miss a mistake, "correct"
+something that was right, or explain a rule too simply. When feedback looks
+wrong, check it in a dictionary or a grammar book. A larger model (or a
+cloud model) makes fewer of these mistakes; none makes zero.
+
+Limits of the whole app:
+
+- **Speech recognition guesses.** It writes down the most likely words, so
+  it can mishear a correct word (short words, names, homophones and strong
+  accents are the usual cases) and it can also quietly repair a real slip.
+  It never hears pronunciation, stress or intonation.
+- **The voice can misread.** A text-to-speech voice sometimes reads numbers,
+  abbreviations, names or (in Japanese) kanji with the wrong reading.
+- **Quality depends on the language.** Models, voices and recognition are
+  best in widely used languages and weaker in others.
+- **Ratings are not exam scores.** Use them to compare your own work over
+  time. The same text can get a slightly different rating twice.
+- **Long texts.** A local model reads a limited amount at once (see
+  "Context window"); the app warns you, but it cannot make the model read more.
+- **One learner, one computer.** No accounts, no syncing between devices,
+  and the page is in English only.
+- **A running session lives in memory.** If the app is stopped or restarted
+  in the middle of a session, that session is lost (finished results are in
+  the history).
+- **Speed.** With a local model every step takes seconds, and long tasks
+  (a 100-word list, a long text with ten questions) take minutes.
+
+Limits of each feature:
+
+| Feature | What to keep in mind |
+|---|---|
+| Conversation, job interview | The feedback is based on the written transcript, so a misheard word can be "corrected" although you said it right, and pronunciation is not judged. In hands-free mode a pause of two seconds ends your turn, and background noise can keep the microphone open. The interviewer does not know the real company or job beyond what you give it |
+| Interpreter | Your interpretation is judged from its transcript. The "ideal version" is one good rendering, not the only one, and its quality in the second language depends on the model. In a dialogue you need a voice for both languages |
+| Speech | No judgement of pronunciation, voice or body language. Pace is counted from the transcript, so recognition mistakes change it slightly |
+| Shadowing | Not a pronunciation score: it shows which words the recognition made out. A word spoken correctly can be marked as missed (most often in languages with several scripts, such as kanji and kana), and a word spoken badly can be accepted |
+| Listening comprehension | The quality of the exercise depends on the voice you have for the language. Questions can occasionally be ambiguous |
+| Vocabulary practice (text) | Only the listed translations count as correct at once; another correct translation depends on the teacher's second opinion, which can be too strict or too generous. Words are tested without context |
+| Vocabulary practice (voice) | A single word without context is the hardest case for speech recognition: your word can be written down wrongly, or as a different word that sounds the same, even when you pronounced it correctly. Check the answer box and correct it before you submit |
+| Vocabulary list creator | Readings, nuances and example sentences can contain mistakes: check a list before you memorise it. At most 100 entries per list |
+| Dictation | Punctuation and capital letters are not marked. The same word written in another accepted way (digits instead of a number word, kana instead of kanji) counts as different. Handwriting can be misread: check the review box |
+| Essay, written translation | The rating is the model's opinion. Not every mistake is listed, only the most important ones. The ideal version is one possible version. Length limits apply |
+| Reading comprehension | A "correct" answer can occasionally be debatable, mostly with tricky questions and small models. You may get fewer questions than you asked for |
+| Grammar drills | If the model's own answer key is wrong, the marking is wrong too. Another correct answer depends on the second opinion. Explanations are short and may leave out exceptions |
+| History and mistake review | Only sessions finished after this feature was added are stored. The same mistake is recognised only when its text is identical. Free-text feedback (conversation, interpreter, shadowing) is not turned into review items |
+| Uploads | Only the first 8,000 characters of a document are used. Scanned PDFs and old `.doc` files cannot be read. Photos need a model that can read images |
+
+## What leaves your computer
+
+| Setup | What is sent, and where |
+|---|---|
+| Local (Ollama, local Whisper, a voice without "Online", "Natural" or "Google" in its name) | Nothing. Texts, recordings, uploads and your history stay on your computer |
+| A browser voice with "Online", "Natural" or "Google" in its name | The sentences that are read aloud go to that company's servers |
+| A cloud chat, speech or transcription service | Whatever that part handles: your texts and uploads (chat), the text to be spoken (speech), your recordings (transcription). The provider's privacy terms apply |
+
+During installation, Python packages, the Ollama model and the Whisper model
+are downloaded once. The app itself collects no statistics and contains no
+tracking. It listens only on your own computer (`localhost`), so other
+devices on the network cannot open it.
+
 ## Troubleshooting
 
 | Message | What to do |
@@ -584,6 +856,27 @@ feedback is about words, grammar and content.
 | "Reading handwriting needs a chat model that can read images" | Use a chat model with image support, or type the dictation instead |
 | The handwriting is read badly | Retake the photo: straight, sharp, good light. Then correct the remaining misreadings in the review box |
 | Dictation is silent | Check the PC volume, pick another voice in the Voice list, or try Edge |
+
+## Pending
+
+Known gaps, so that nobody assumes more than has been checked:
+
+- **End-to-end testing with a cloud model is still pending.** The app talks
+  to models through the OpenAI-style API, and this has been exercised with
+  Ollama and with the pretend services of the automated tests, but the full
+  set of features has not yet been run against a real cloud provider (chat,
+  speech and transcription). Expect small differences between providers,
+  for example in which options a model accepts.
+- **macOS has not been tested.** The installation steps above are written
+  from the documentation of the tools, not from a test on a Mac.
+- **The browser tests run on Linux only** in the automated checks, and do
+  not yet cover uploads (documents and photos), the job interview, the
+  two-speaker interpreter, the Word and PDF exports of the word list, and
+  hands-free mode.
+- **Script variants** (kanji and kana, digits and number words) are not yet
+  treated as the same word in dictation and shadowing.
+- **Browsers other than Chrome and Edge** (Firefox, Safari) have not been
+  tried.
 
 ## For developers
 
@@ -617,6 +910,8 @@ app/
     handwriting.py   reads handwriting from photos (dictation and essay)
   textutils.py       shared text helpers (answer matching, dictation marking)
   static/            browser UI (plain HTML, CSS, JavaScript)
+.github/workflows/   automated checks that GitHub runs on every push
+LICENSE              the licence (see "Licence")
 tests/               run without any model, using a fake provider
   browser/           tests that click through the pages in a real browser
 data/                local user data, ignored by git
@@ -719,3 +1014,29 @@ Two things to know:
 5. If a key is ever committed by mistake, deleting it in a later commit is not
    enough, because git keeps history. Revoke the key at the provider and
    create a new one.
+
+## Licence
+
+The source code of Language Suite is released under the MIT License with
+the "Commons Clause" License Condition v1.0. The full text is in
+[LICENSE](LICENSE); that file is what counts. In short:
+
+| You may | You may not |
+|---|---|
+| Use the app, alone or in an organisation of any size, including at work | Sell the software, or a product or service whose value comes mainly from it (this includes paid hosting and paid support for it) |
+| Read, change and share the code, keeping the licence text with it | Remove the licence or the copyright notice |
+
+Because of the added condition this is a "source-available" licence, not an
+open-source one in the strict sense.
+
+**Commercial use:** to use the code in a way the licence does not allow,
+contact the author at the address given in [LICENSE](LICENSE).
+
+The software comes without warranty of any kind.
+
+Models, voices and speech engines are not part of this repository and are
+not covered by this licence. Each one (the Ollama model you choose, Whisper,
+the voices of your system or of a cloud service) is installed separately and
+has its own terms, which you accept when you install or use it. The Python
+packages listed in the `requirements` files are likewise under their own
+licences.
