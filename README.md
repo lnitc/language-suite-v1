@@ -1,5 +1,7 @@
 # Language Suite
 
+**English** | [日本語](README.ja.md)
+
 An app for practising languages with an AI teacher. It runs on your own
 computer with free local models, or with a cloud AI service if you prefer.
 
@@ -917,6 +919,7 @@ app/
 .github/workflows/   automated checks that GitHub runs on every push
 LICENSE              the licence (see "Licence")
 USER_MANUAL.md       a simple installation guide for non-technical users
+README.ja.md, USER_MANUAL.ja.md   Japanese versions of both documents
 tests/               run without any model, using a fake provider
   browser/           tests that click through the pages in a real browser
 data/                local user data, ignored by git

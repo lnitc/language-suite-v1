@@ -1,5 +1,7 @@
 # Language Suite: a simple guide
 
+**English** | [日本語](USER_MANUAL.ja.md)
+
 This guide is for people who want to use Language Suite and have never
 installed a program this way before. You do not need to know anything about
 programming. You need about an hour, an internet connection for the
