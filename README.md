@@ -3,6 +3,10 @@
 An app for practising languages with an AI teacher. It runs on your own
 computer with free local models, or with a cloud AI service if you prefer.
 
+**New to installing software this way?** Start with the
+[simple guide](USER_MANUAL.md): it explains the terms and walks through the
+installation step by step, without assuming any technical knowledge.
+
 The features are grouped into seven sections:
 
 | Section | Features |
@@ -912,6 +916,7 @@ app/
   static/            browser UI (plain HTML, CSS, JavaScript)
 .github/workflows/   automated checks that GitHub runs on every push
 LICENSE              the licence (see "Licence")
+USER_MANUAL.md       a simple installation guide for non-technical users
 tests/               run without any model, using a fake provider
   browser/           tests that click through the pages in a real browser
 data/                local user data, ignored by git
